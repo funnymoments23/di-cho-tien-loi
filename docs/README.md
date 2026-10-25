@@ -20,9 +20,37 @@ nhắc nhở trước khi hết hạn, lên kế hoạch bữa ăn và lưu côn
 ```
 di-cho-tien-loi/
 ├── docs/        # tài liệu thiết kế
-├── server/      # backend Node.js + Express      (chưa khởi tạo)
+├── server/      # backend Node.js + Express      (đang làm)
 ├── mobile/      # ứng dụng React Native + Expo   (chưa khởi tạo)
 └── admin/       # trang quản trị web             (chưa khởi tạo)
+```
+
+## Tiến độ
+
+### Đã làm — backend (`server/`)
+
+- Khởi tạo project Node.js (Express 5, Mongoose, Joi, JWT, bcryptjs, multer, node-cron, nodemailer).
+- Kết nối MongoDB qua `MONGODB_URI` ([database.js](../server/src/config/database.js)); script kiểm tra kết nối `scripts/test-db.js`.
+- Dựng `app.js` với CORS, parse JSON/urlencoded; endpoint `GET /it4788/health`.
+- Khuôn response thống nhất `{ code, message, data }`:
+  - `constants/responseCode.js`: bảng mã response (code 5 chữ số, HTTP status, message) theo đề.
+  - `utils/response.js` (`sendSuccess`, `fail`) và `utils/AppError.js`.
+  - `middlewares/error.middleware.js`: xử lý 404 và lỗi tập trung (kể cả JSON sai định dạng).
+- Model `User` ([user.models.js](../server/src/models/user.models.js)): email, mật khẩu, tên, avatar, ngôn ngữ, múi giờ, device token, xác minh email, refresh token, role (`user`/`admin`), `groupId`.
+
+### Chưa làm
+
+- Các file đã tạo sẵn nhưng còn trống: `auth.middleware.js`, `validate.middleware.js`, `utils/jwt.js`, `utils/email.js`.
+- Các model còn lại (Group, Food, ShoppingList, Recipe, MealPlan...), routes/controllers, API đăng ký/đăng nhập.
+- Ứng dụng mobile và trang admin.
+
+### Chạy server
+
+```bash
+cd server
+npm install
+# tạo server/.env gồm PORT và MONGODB_URI
+npm run dev     # http://localhost:5000/it4788/health
 ```
 
 ## Tài liệu
