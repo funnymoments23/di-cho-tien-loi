@@ -37,11 +37,19 @@ di-cho-tien-loi/
   - `utils/response.js` (`sendSuccess`, `fail`) và `utils/AppError.js`.
   - `middlewares/error.middleware.js`: xử lý 404 và lỗi tập trung (kể cả JSON sai định dạng).
 - Model `User` ([user.models.js](../server/src/models/user.models.js)): email, mật khẩu, tên, avatar, ngôn ngữ, múi giờ, device token, xác minh email, refresh token, role (`user`/`admin`), `groupId`.
+- **Nhóm API Auth** (`routes/user.route.js`): 6 endpoint chạy được trên Postman.
+  - `POST /it4788/user` — đăng ký, gửi mã 6 số qua email (`00035`).
+  - `POST /it4788/user/verify-email` — nhập `{ code, token }` (`00058`).
+  - `POST /it4788/user/send-verification-code` — gửi lại mã (`00048`).
+  - `POST /it4788/user/login` — trả `user` + access token 1h + refresh token 7 ngày (`00047`).
+  - `POST /it4788/user/refresh-token` — rotate refresh token (`00065`).
+  - `POST /it4788/user/logout` — yêu cầu Bearer token, thu hồi refresh token (`00050`).
+  - Nền tảng: `utils/jwt.js` (2 secret, `typ` chống dùng lẫn token, lưu refresh token dạng SHA-256), `middlewares/auth.middleware.js`, `middlewares/validate.middleware.js` (Joi → mã lỗi của đề), `utils/email.js` (Nodemailer; thiếu SMTP ở dev thì in mã ra console).
 
 ### Chưa làm
 
-- Các file đã tạo sẵn nhưng còn trống: `auth.middleware.js`, `validate.middleware.js`, `utils/jwt.js`, `utils/email.js`.
-- Các model còn lại (Group, Food, ShoppingList, Recipe, MealPlan...), routes/controllers, API đăng ký/đăng nhập.
+- Các model còn lại (Group, Food, ShoppingList, Recipe, MealPlan...), routes/controllers cho các nhóm API còn lại.
+- API tài khoản (`GET/PUT/DELETE /user`, `change-password`), API nhóm, và các API bổ sung.
 - Ứng dụng mobile và trang admin.
 
 ### Chạy server
