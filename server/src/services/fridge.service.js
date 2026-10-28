@@ -58,8 +58,9 @@ const findFoodInGroup = async (groupId, foodName) => {
   return { food: null, otherGroup: Boolean(existsElsewhere) };
 };
 
-const normalizeText = (value) =>
-  typeof value === 'string' ? value.trim() : value;
+// Query có thể là mảng khi client lặp tham số (?foodName=a&foodName=b):
+// chỉ nhận chuỗi, còn lại coi như không có giá trị.
+const normalizeText = (value) => (typeof value === 'string' ? value.trim() : null);
 
 /** GET /fridge — toàn bộ mục trong tủ của nhóm, sắp xếp theo hạn sử dụng gần nhất. */
 const getFridgeItems = async (userId) => {

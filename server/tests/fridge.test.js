@@ -657,6 +657,25 @@ describe(`DELETE ${FRIDGE} — xoá mục trong tủ`, () => {
 });
 
 // =====================================================================
+describe('Dọn dữ liệu liên quan tới tủ lạnh', () => {
+  it('người cuối cùng rời nhóm thì đồ trong tủ của nhóm cũng bị xoá', async () => {
+    const solo = await createLoggedInUser({ username: `solo${++counter}` });
+    await request(app)
+      .post(GROUP)
+      .set(auth(solo.token))
+      .send({ groupName: 'Gia dinh C' });
+    await createFoodRequest(solo.token, { foodName: 'Trứng' });
+    await createFridgeRequest(solo.token, { foodName: 'Trứng' });
+
+    expect(await FridgeItem.countDocuments({})).toBe(1);
+
+    const res = await request(app).post(`${GROUP}/leave`).set(auth(solo.token));
+    expect(res.status).toBe(200);
+    expect(await FridgeItem.countDocuments({})).toBe(0);
+  });
+});
+
+// =====================================================================
 describe(`GET ${FOOD}/search?inFridge= — lọc theo tủ lạnh`, () => {
   beforeEach(async () => {
     await createFridgeRequest(ctx.member.token); // chỉ "Thịt bò" ở trong tủ

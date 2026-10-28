@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Group = require('../models/group.models');
 const User = require('../models/user.models');
+const FridgeItem = require('../models/fridgeItem.models');
 const RC = require('../constants/responseCode');
 const { fail } = require('../utils/response');
 const { toPublicUser, toPublicGroup } = require('../utils/serializers');
@@ -165,6 +166,8 @@ const detachUserFromGroup = async (user, preloadedGroup) => {
 
     if (remaining.length === 0) {
       await Group.deleteOne({ _id: group._id });
+      // Nhóm bị xoá thì dọn luôn đồ trong tủ lạnh của nhóm.
+      await FridgeItem.deleteMany({ groupId: group._id });
       groupDeleted = true;
     } else {
       newAdminId = remaining[0]._id;

@@ -1,10 +1,10 @@
-# Báo cáo kiểm thử — nhóm API Auth, Tài khoản, Nhóm, Danh mục, Đơn vị & Thực phẩm
+# Báo cáo kiểm thử — nhóm API Auth, Tài khoản, Nhóm, Danh mục, Đơn vị, Thực phẩm & Tủ lạnh
 
-- **Ngày chạy:** 28/10/2026 (bổ sung nhóm API Thực phẩm)
-- **Phạm vi:** 6 endpoint Auth + 5 endpoint Tài khoản + 6 endpoint Nhóm + 4 endpoint Danh mục + 4 endpoint Đơn vị + 5 endpoint Thực phẩm (`server/src/routes/user.route.js`, `group.route.js`, `admin.route.js`, `food.route.js`) + endpoint health + rate limit
+- **Ngày chạy:** 28/10/2026 (bổ sung nhóm API Tủ lạnh)
+- **Phạm vi:** 6 endpoint Auth + 5 endpoint Tài khoản + 6 endpoint Nhóm + 4 endpoint Danh mục + 4 endpoint Đơn vị + 5 endpoint Thực phẩm + 5 endpoint Tủ lạnh (`server/src/routes/user.route.js`, `group.route.js`, `admin.route.js`, `food.route.js`, `fridge.route.js`) + endpoint health + rate limit
 - **Công cụ:** Jest 30.5.2, Supertest 7.3.1, mongodb-memory-server 11.3.0
 - **Môi trường:** Windows, Node.js v24.11.0, MongoDB in-memory 8.2.6
-- **Kết quả:** **199/199 test PASS**, 7 test suite, ~13,5 giây (sau khi binary Mongo đã tải sẵn)
+- **Kết quả:** **252/252 test PASS**, 8 test suite, ~19 giây (sau khi binary Mongo đã tải sẵn)
 
 ## Cách chạy
 
@@ -21,7 +21,8 @@ Cấu hình: [`server/jest.config.js`](../server/jest.config.js), biến môi tr
 [`server/tests/group.test.js`](../server/tests/group.test.js),
 [`server/tests/category.test.js`](../server/tests/category.test.js),
 [`server/tests/unit.test.js`](../server/tests/unit.test.js),
-[`server/tests/food.test.js`](../server/tests/food.test.js) và
+[`server/tests/food.test.js`](../server/tests/food.test.js),
+[`server/tests/fridge.test.js`](../server/tests/fridge.test.js) và
 [`server/tests/rate-limit.test.js`](../server/tests/rate-limit.test.js).
 
 Đặc điểm bộ test:
@@ -29,7 +30,7 @@ Cấu hình: [`server/jest.config.js`](../server/jest.config.js), biến môi tr
 - Dùng **MongoDB in-memory** nên không chạm vào DB thật, không cần `.env`, chạy được trên CI.
 - **Mock `utils/email.js`** — không gửi email thật; mã 6 số lấy từ `mock.calls` để test luồng verify.
 - `BCRYPT_ROUNDS=4` cho nhanh; JWT secret cố định trong `setup-env.js`.
-- `User.deleteMany({})` + `Group.deleteMany({})` + `Category.deleteMany({})` + `Unit.deleteMany({})` + `Food.deleteMany({})` trước mỗi test → các test độc lập, không phụ thuộc thứ tự.
+- `User.deleteMany({})` + `Group.deleteMany({})` + `Category.deleteMany({})` + `Unit.deleteMany({})` + `Food.deleteMany({})` + `FridgeItem.deleteMany({})` trước mỗi test → các test độc lập, không phụ thuộc thứ tự.
 - Rate limit tắt mặc định trong bộ test chức năng (`AUTH_RATE_LIMIT_MAX=0`), có test riêng với ngưỡng thấp.
 
 ## Kết quả theo endpoint
@@ -185,7 +186,7 @@ Ghi chú nhóm Tài khoản:
   Ảnh hiện lưu ở `server/uploads/avatars/` và phục vụ qua `/it4788/uploads/...`; khi deploy nên chuyển sang Cloudinary.
 - Đổi mật khẩu **thu hồi refresh token** đang lưu để các phiên cũ không tiếp tục được; access token hiện tại vẫn dùng được tới khi hết hạn (1 giờ).
 - `PUT /user/device-token` là API bổ sung (đặc tả gốc không có), chưa có mã response riêng nên dùng `00086`/`00025`.
-- `DELETE /user` gỡ user khỏi nhóm trước khi xoá tài khoản: thành viên bị bỏ khỏi `members`, trưởng nhóm rời đi thì chuyển quyền cho thành viên còn lại (hoặc xoá nhóm nếu không còn ai). Các dữ liệu khác (danh sách mua sắm, tủ lạnh...) chưa dọn vì model chưa được xây dựng.
+- `DELETE /user` gỡ user khỏi nhóm trước khi xoá tài khoản: thành viên bị bỏ khỏi `members`, trưởng nhóm rời đi thì chuyển quyền cho thành viên còn lại (hoặc xoá nhóm nếu không còn ai, kèm dọn đồ trong tủ lạnh). Các dữ liệu khác (danh sách mua sắm, bữa ăn...) chưa dọn vì model chưa được xây dựng.
 
 ### Nhóm API Nhóm gia đình (`tests/group.test.js`) — 32/32
 
@@ -446,7 +447,106 @@ Ghi chú nhóm Thực phẩm:
 - Quyền: mọi thành viên được tạo; **người tạo hoặc trưởng nhóm** được sửa/xoá (`00167`/`00181` cho người khác). Đây là quy ước của nhóm vì đặc tả gốc chỉ có mã lỗi mà không nói rõ ai được sửa/xoá.
 - Chuỗi rỗng sau trim được xử lý là **thiếu trường** (`00147`/`00161`) để đồng nhất với Danh mục/Đơn vị; mã "tên không hợp lệ" (`00148`/`00162`) dùng cho tên quá dài.
 - Ảnh thực phẩm lưu ở `server/uploads/foods/` và phục vụ qua `/it4788/uploads/foods/...`; `uploadFoodImage` ghi đường dẫn vào `req.body.image` trước bước validate nên request chỉ có ảnh vẫn cập nhật được.
-- `GET /food/search` hiện hỗ trợ `keyword` và `categoryName`; tham số `inFridge` trong [tài liệu 02](02-GOP-Y-DAC-TA-API.md) mục 3.1 sẽ bổ sung khi có model `FridgeItem`.
+- `GET /food/search` hỗ trợ `keyword`, `categoryName` và `inFridge` (`true`/`false` — lọc theo tủ lạnh của nhóm, [tài liệu 02](02-GOP-Y-DAC-TA-API.md) mục 3.1).
+
+### Nhóm API Tủ lạnh (`tests/fridge.test.js`) — 53/53
+
+#### `POST /it4788/fridge` — thêm thực phẩm vào tủ (15/15)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 200 | Không có token | 401 / `00006` | PASS |
+| 201 | Body rỗng | 400 / `00190` | PASS |
+| 202 | `foodName` rỗng | 400 / `00190` | PASS |
+| 203 | `foodName` quá 100 ký tự | 400 / `00190` | PASS |
+| 204 | Thiếu `useWithin` | 400 / `00191` | PASS |
+| 205 | `useWithin` không phải ngày | 400 / `00191` | PASS |
+| 206 | `quantity` = 0 hoặc không phải số | 400 / `00192` | PASS |
+| 207 | `note` quá 500 ký tự | 400 / `00193` | PASS |
+| 208 | Người dùng chưa vào nhóm | 403 / `00196` | PASS |
+| 209 | Thực phẩm không tồn tại | 404 / `00194` | PASS |
+| 210 | Thực phẩm thuộc nhóm khác | 403 / `00198` | PASS |
+| 211 | Thực phẩm đã có trong tủ | 409 / `00199`; DB không thêm bản ghi | PASS |
+| 212 | Hợp lệ | 201 / `00202`; lưu `quantity`, `useWithin`, `location`, `note`, `isNotified=false` | PASS |
+| 213 | Tên / ghi chú có khoảng trắng | 201 / `00202`; được trim | PASS |
+| 214 | Hai nhóm cùng tên thực phẩm của mình | 201 / `00202`; cho phép | PASS |
+
+#### `GET /it4788/fridge` — danh sách đồ trong tủ (5/5)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 215 | Không có token | 401 / `00006` | PASS |
+| 216 | Người dùng chưa vào nhóm | 403 / `00225` | PASS |
+| 217 | Tủ chưa có gì | 200 / `00228`, `data = []` | PASS |
+| 218 | Có dữ liệu | 200 / `00228`; kèm `foodName`/`categoryName`/`unitName`, sắp xếp theo `useWithin` | PASS |
+| 219 | Hai nhóm khác nhau | Chỉ trả đồ trong tủ của nhóm mình | PASS |
+
+#### `GET /it4788/fridge/item` — xem một mục (7/7)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 220 | Không có token | 401 / `00006` | PASS |
+| 221 | Người dùng chưa vào nhóm | 403 / `00225` | PASS |
+| 222 | Thiếu `foodName` | 400 / `00229` | PASS |
+| 223 | Thực phẩm không tồn tại | 404 / `00230` | PASS |
+| 224 | Thực phẩm thuộc nhóm khác | 403 / `00232` | PASS |
+| 225 | Thực phẩm có nhưng chưa thêm vào tủ | 404 / `00234` | PASS |
+| 226 | Mục tồn tại | 200 / `00237`; trả đúng số lượng, ghi chú | PASS |
+
+#### `PUT /it4788/fridge` — sửa mục trong tủ (16/16)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 227 | Không có token | 401 / `00006` | PASS |
+| 228 | Thiếu `itemId` | 400 / `00204` | PASS |
+| 229 | `itemId` sai định dạng | 400 / `00204` | PASS |
+| 230 | Không có trường cập nhật | 400 / `00204` | PASS |
+| 231 | `newUseWithin` không hợp lệ | 400 / `00205` | PASS |
+| 232 | `newQuantity` <= 0 hoặc không phải số | 400 / `00206` | PASS |
+| 233 | `newNote` quá 500 ký tự | 400 / `00207` | PASS |
+| 234 | `newFoodName` rỗng | 400 / `00207` | PASS |
+| 235 | Người dùng chưa vào nhóm | 403 / `00210` | PASS |
+| 236 | Mục trong tủ không tồn tại | 404 / `00213` | PASS |
+| 237 | Mục thuộc nhóm khác | 403 / `00212` | PASS |
+| 238 | Tên thực phẩm mới không có trong nhóm | 404 / `00214` | PASS |
+| 239 | Thực phẩm mới đã có mục khác trong tủ | 409 / `00199` | PASS |
+| 240 | Sửa số lượng + hạn + ghi chú + vị trí | 200 / `00216`; đặt lại `isNotified=false` | PASS |
+| 241 | Đổi tên thực phẩm | 200 / `00216`; trả kèm danh mục/đơn vị mới | PASS |
+| 242 | Xoá ghi chú / vị trí bằng chuỗi rỗng | 200 / `00216`; hai trường thành `null` | PASS |
+
+#### `DELETE /it4788/fridge` — xoá mục trong tủ (6/6)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 243 | Không có token | 401 / `00006` | PASS |
+| 244 | Thiếu `foodName` | 400 / `00217` | PASS |
+| 245 | Thực phẩm không tồn tại | 404 / `00218` | PASS |
+| 246 | Thực phẩm thuộc nhóm khác | 403 / `00219` | PASS |
+| 247 | Thực phẩm chưa thêm vào tủ | 404 / `00221` | PASS |
+| 248 | Xoá thành công | 200 / `00224`; các mục khác giữ nguyên | PASS |
+
+#### Dọn dữ liệu liên quan (1/1)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 249 | Người cuối cùng rời nhóm | 200 / `00108`; đồ trong tủ lạnh của nhóm bị xoá | PASS |
+
+#### Bộ lọc `inFridge` của `GET /it4788/food/search` (3/3)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 250 | `inFridge=true` | 200 / `00188`; chỉ thực phẩm đang có trong tủ | PASS |
+| 251 | `inFridge=false` | 200 / `00188`; chỉ thực phẩm chưa có trong tủ | PASS |
+| 252 | Xoá thực phẩm đang có trong tủ | 200 / `00184`; mục tủ lạnh tham chiếu cũng bị xoá | PASS |
+
+Ghi chú nhóm Tủ lạnh:
+
+- `useWithin` nhận chuỗi ISO 8601 và lưu vào `expiryDate` kiểu `Date` (theo đề xuất [tài liệu 02](02-GOP-Y-DAC-TA-API.md) mục 4.2); response trả lại `useWithin` để client dùng đúng tên trường của đặc tả.
+- Trường `location` (ngăn mát / ngăn đá / cánh tủ / ngoài tủ) là bổ sung theo đề mục B.3 và [tài liệu 02](02-GOP-Y-DAC-TA-API.md) mục 3.6.
+- Mỗi cặp `{ groupId, foodId }` là unique (`00199`); kiểm tra cả trước khi ghi lẫn bắt lỗi `11000` khi hai request đồng thời.
+- Quyền: mọi thành viên trong nhóm được thêm/sửa/xoá mục tủ. Thực phẩm hoặc mục tủ thuộc nhóm khác bị từ chối bằng `00198`/`00212`/`00219`/`00232`.
+- Đổi `useWithin` đặt lại `isNotified = false` để cron job nhắc hết hạn gửi lại theo hạn mới (docs/01 mục 6.3).
+- `DELETE /food` xoá kèm các mục tủ lạnh tham chiếu để không còn bản ghi mồ côi; `GET /food/search` dùng `FridgeItem.distinct('foodId')` cho bộ lọc `inFridge`.
 
 ## 4 vấn đề đã khắc phục
 
@@ -468,7 +568,6 @@ Ghi chú triển khai:
 - `.env` hiện không có `JWT_VERIFY_SECRET`, nên verification token dùng chung secret với access token (vẫn an toàn nhờ claim `typ`). Nên bổ sung secret riêng cho production.
 - Rate limit chưa có test cho trường hợp nhiều IP khác nhau (cần giả lập `X-Forwarded-For` + `trust proxy`).
 - `DELETE /admin/category` và `DELETE /admin/unit` chưa kiểm tra thực phẩm đang tham chiếu: xoá danh mục/đơn vị sẽ để lại `Food` trỏ tới id không còn tồn tại. Cần chặn (trả mã phù hợp) hoặc chuyển thực phẩm sang danh mục/đơn vị mặc định.
-- `GET /food/search` chưa lọc được `inFridge` vì nhóm API Tủ lạnh (model `FridgeItem`) chưa được xây dựng.
 
 ## Vấn đề môi trường đã xử lý
 

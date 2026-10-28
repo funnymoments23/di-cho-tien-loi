@@ -79,12 +79,19 @@ di-cho-tien-loi/
   - `PUT /food` — sửa bằng `{ foodName, newName?, newCategory?, newUnit?, image? }` (`00178`; thiếu `foodName` `00161`, tên không hợp lệ `00162`, không có trường cập nhật `00163`, danh mục/đơn vị/tên mới không hợp lệ `00164`–`00166`, không tìm thấy hoặc không có quyền `00167`, đơn vị mới không tồn tại `00169`, danh mục mới không tồn tại `00171`, tên mới trùng `00173`).
   - `DELETE /food` — xoá theo body `{ foodName }` (`00184`; thiếu tên `00179`, không tìm thấy `00180`, không có quyền `00181`).
   - Quyền: mọi thành viên được tạo; chỉ người tạo hoặc trưởng nhóm được sửa/xoá. Ảnh lưu ở `server/uploads/foods/`, phục vụ qua `/it4788/uploads/foods/`.
-- **Kiểm thử tự động**: 199 test (Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + rate limit), hiện **199/199 pass** — xem [báo cáo kiểm thử](test-report.md).
+- **Nhóm API Tủ lạnh** (`routes/fridge.route.js`, 5 endpoint) — thực phẩm đang có trong tủ của nhóm, mỗi thực phẩm chỉ một mục trong tủ.
+  - `GET /fridge` — danh sách đồ trong tủ kèm tên/danh mục/đơn vị của thực phẩm, sắp xếp theo hạn sử dụng gần nhất (`00228`; chưa vào nhóm `00225`).
+  - `GET /fridge/item?foodName=` — xem một mục theo tên thực phẩm (`00237`; thiếu tên `00229`, thực phẩm không tồn tại `00230`, thuộc nhóm khác `00232`, chưa có trong tủ `00234`).
+  - `POST /fridge` — thêm với body `{ foodName, quantity, useWithin, location?, note? }` (`00202`; tên không hợp lệ `00190`, hạn không hợp lệ `00191`, số lượng không hợp lệ `00192`, ghi chú không hợp lệ `00193`, thực phẩm không tồn tại `00194`, chưa vào nhóm `00196`, thực phẩm thuộc nhóm khác `00198`, đã có trong tủ `00199`).
+  - `PUT /fridge` — sửa bằng `{ itemId, newFoodName?, newUseWithin?, newQuantity?, newNote?, newLocation? }` (`00216`; thiếu `itemId`/không có trường cập nhật `00204`, hạn/số lượng/ghi chú/tên mới không hợp lệ `00205`–`00207`, chưa vào nhóm `00210`, mục thuộc nhóm khác `00212`, mục không tồn tại `00213`, tên mới không tồn tại `00214`).
+  - `DELETE /fridge` — xoá theo body `{ foodName }` (`00224`; thiếu tên `00217`, thực phẩm không tồn tại `00218`, không có quyền `00219`, chưa có trong tủ `00221`).
+  - Trường `location` (ngăn mát / ngăn đá / cánh tủ / ngoài tủ) là bổ sung theo đề mục B.3 ([tài liệu 02](02-GOP-Y-DAC-TA-API.md) mục 3.6). Đổi `useWithin` sẽ đặt lại `isNotified` để cron nhắc hết hạn gửi lại. Xoá thực phẩm cũng xoá mục tủ lạnh tham chiếu.
+  - `GET /food/search` đã hỗ trợ thêm `inFridge=true|false`.
+- **Kiểm thử tự động**: 252 test (Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh + rate limit), hiện **252/252 pass** — xem [báo cáo kiểm thử](test-report.md).
 
 ### Chưa làm
 
-- Các model còn lại (ShoppingList, Recipe, MealPlan, FridgeItem...), routes/controllers cho các nhóm API còn lại (Tủ lạnh, Đi chợ, Bữa ăn, Công thức).
-- Bộ lọc `inFridge` của `GET /food/search` chờ nhóm API Tủ lạnh (cần model `FridgeItem`).
+- Các model còn lại (ShoppingList, Task, Recipe, MealPlan...), routes/controllers cho các nhóm API còn lại (Đi chợ, Bữa ăn, Công thức).
 - API quên mật khẩu và các API bổ sung khác.
 - Upload ảnh (đại diện, thực phẩm) hiện lưu trên đĩa server (`server/uploads/`, đã gitignore); khi deploy cần chuyển sang Cloudinary để không mất ảnh.
 - Ứng dụng mobile và trang admin.
@@ -102,7 +109,7 @@ npm run dev     # http://localhost:5000/it4788/health
 
 ```bash
 cd server
-npm test        # 199 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + rate limit, dùng MongoDB in-memory, không cần .env
+npm test        # 252 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh + rate limit, dùng MongoDB in-memory, không cần .env
 ```
 
 ## Tài liệu
@@ -111,7 +118,7 @@ npm test        # 199 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn 
 |---|---|
 | [01 – Kế hoạch & Kiến trúc](01-KE-HOACH-KIEN-TRUC.md) | Kiến trúc hệ thống, thiết kế database, cấu trúc thư mục, danh sách màn hình, lộ trình 8 tuần, phân công |
 | [02 – Rà soát đặc tả API](02-GOP-Y-DAC-TA-API.md) | 16 lỗi phát hiện trong mô tả API của đề và đề xuất sửa đổi (phần tính điểm cộng) |
-| [Báo cáo kiểm thử](test-report.md) | 199 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm: ma trận case, kết quả, phát hiện và cách chạy |
+| [Báo cáo kiểm thử](test-report.md) | 252 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh: ma trận case, kết quả, phát hiện và cách chạy |
 
 ## Bắt đầu
 
