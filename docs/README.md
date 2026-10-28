@@ -45,6 +45,8 @@ di-cho-tien-loi/
   - `POST /it4788/user/refresh-token` — rotate refresh token (`00065`).
   - `POST /it4788/user/logout` — yêu cầu Bearer token, thu hồi refresh token (`00050`).
   - Nền tảng: `utils/jwt.js` (2 secret, `typ` chống dùng lẫn token, lưu refresh token dạng SHA-256), `middlewares/auth.middleware.js`, `middlewares/validate.middleware.js` (Joi → mã lỗi của đề), `utils/email.js` (Nodemailer; thiếu SMTP ở dev thì in mã ra console).
+- **Kiểm thử tự động nhóm API Auth**: 45 test (Jest + Supertest + MongoDB in-memory), chạy `npm test`,
+  hiện **45/45 pass** — xem [báo cáo kiểm thử](docs/test-report.md).
 
 ### Chưa làm
 
@@ -61,12 +63,20 @@ npm install
 npm run dev     # http://localhost:5000/it4788/health
 ```
 
+### Chạy test
+
+```bash
+cd server
+npm test        # 45 test API Auth, dùng MongoDB in-memory, không cần .env
+```
+
 ## Tài liệu
 
 | Tài liệu | Nội dung |
 |---|---|
 | [01 – Kế hoạch & Kiến trúc](docs/01-KE-HOACH-KIEN-TRUC.md) | Kiến trúc hệ thống, thiết kế database, cấu trúc thư mục, danh sách màn hình, lộ trình 8 tuần, phân công |
 | [02 – Rà soát đặc tả API](docs/02-GOP-Y-DAC-TA-API.md) | 16 lỗi phát hiện trong mô tả API của đề và đề xuất sửa đổi (phần tính điểm cộng) |
+| [Báo cáo kiểm thử](docs/test-report.md) | 45 test API Auth: ma trận case, kết quả, phát hiện và cách chạy |
 
 ## Bắt đầu
 
