@@ -125,6 +125,8 @@ const RESPONSE_CODE = Object.freeze({
     UNIT_UPDATE_MISSING_FIELDS: def('00117', BAD_REQUEST, 'Thiếu thông tin name cũ, name mới'),
     UNIT_UPDATE_SAME_NAME: def('00118', BAD_REQUEST, 'Tên cũ trùng với tên mới'),
     UNIT_UPDATE_NOT_FOUND: def('00119', NOT_FOUND, 'Không tìm thấy đơn vị với tên cung cấp'),
+    // Đặc tả không có mã riêng cho tên mới bị trùng khi sửa đơn vị; dùng chung mã 00113.
+    UNIT_UPDATE_NEW_NAME_EXISTS: def('00113', CONFLICT, 'Đã tồn tại đơn vị có tên này'),
     UNIT_UPDATE_SERVER_ERROR_1: def('00120', SERVER_ERROR, 'server error'),
     UNIT_UPDATE_SERVER_ERROR_2: def('00121', SERVER_ERROR, 'server error'),
     UNIT_UPDATE_SUCCESS: def('00122', OK, 'Sửa đổi đơn vị thành công'),

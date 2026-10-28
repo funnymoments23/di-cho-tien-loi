@@ -1,10 +1,10 @@
-# Báo cáo kiểm thử — nhóm API Auth, Tài khoản & Nhóm
+# Báo cáo kiểm thử — nhóm API Auth, Tài khoản, Nhóm, Danh mục & Đơn vị
 
-- **Ngày chạy:** 28/10/2026 (bổ sung nhóm API Nhóm gia đình)
-- **Phạm vi:** 6 endpoint Auth + 5 endpoint Tài khoản + 6 endpoint Nhóm (`server/src/routes/user.route.js`, `group.route.js`) + endpoint health + rate limit
+- **Ngày chạy:** 28/10/2026 (bổ sung nhóm API Danh mục và Đơn vị)
+- **Phạm vi:** 6 endpoint Auth + 5 endpoint Tài khoản + 6 endpoint Nhóm + 4 endpoint Danh mục + 4 endpoint Đơn vị (`server/src/routes/user.route.js`, `group.route.js`, `admin.route.js`) + endpoint health + rate limit
 - **Công cụ:** Jest 30.5.2, Supertest 7.3.1, mongodb-memory-server 11.3.0
 - **Môi trường:** Windows, Node.js v24.11.0, MongoDB in-memory 8.2.6
-- **Kết quả:** **108/108 test PASS**, 4 test suite, ~4,4 giây (sau khi binary Mongo đã tải sẵn)
+- **Kết quả:** **152/152 test PASS**, 6 test suite, ~6,4 giây (sau khi binary Mongo đã tải sẵn)
 
 ## Cách chạy
 
@@ -18,7 +18,9 @@ Cấu hình: [`server/jest.config.js`](../server/jest.config.js), biến môi tr
 [`server/tests/setup-env.js`](../server/tests/setup-env.js), test suite ở
 [`server/tests/auth.test.js`](../server/tests/auth.test.js),
 [`server/tests/user.test.js`](../server/tests/user.test.js),
-[`server/tests/group.test.js`](../server/tests/group.test.js) và
+[`server/tests/group.test.js`](../server/tests/group.test.js),
+[`server/tests/category.test.js`](../server/tests/category.test.js),
+[`server/tests/unit.test.js`](../server/tests/unit.test.js) và
 [`server/tests/rate-limit.test.js`](../server/tests/rate-limit.test.js).
 
 Đặc điểm bộ test:
@@ -26,7 +28,7 @@ Cấu hình: [`server/jest.config.js`](../server/jest.config.js), biến môi tr
 - Dùng **MongoDB in-memory** nên không chạm vào DB thật, không cần `.env`, chạy được trên CI.
 - **Mock `utils/email.js`** — không gửi email thật; mã 6 số lấy từ `mock.calls` để test luồng verify.
 - `BCRYPT_ROUNDS=4` cho nhanh; JWT secret cố định trong `setup-env.js`.
-- `User.deleteMany({})` + `Group.deleteMany({})` trước mỗi test → các test độc lập, không phụ thuộc thứ tự.
+- `User.deleteMany({})` + `Group.deleteMany({})` + `Category.deleteMany({})` + `Unit.deleteMany({})` trước mỗi test → các test độc lập, không phụ thuộc thứ tự.
 - Rate limit tắt mặc định trong bộ test chức năng (`AUTH_RATE_LIMIT_MAX=0`), có test riêng với ngưỡng thấp.
 
 ## Kết quả theo endpoint
@@ -259,6 +261,109 @@ Ghi chú nhóm Nhóm:
 - `GET /user/group/info` và `POST /user/group/leave` là hai API bổ sung theo mục 4.4 tài liệu 02. Quyền trưởng nhóm được kiểm tra bằng middleware `groupAdmin`.
 - Các mã mới dùng dải trống: `00094` (thiếu tên nhóm), `00101` (không phải trưởng nhóm khi thêm), `00105` (không xoá được trưởng nhóm), `00108` (rời nhóm).
 - Tạo nhóm/thêm thành viên dùng cập nhật có điều kiện (`groupId = null`) để tránh 2 request đồng thời đưa một người vào 2 nhóm.
+
+### Nhóm API Danh mục (`tests/category.test.js`) — 22/22
+
+#### `GET /it4788/admin/category` — lấy danh sách (3/3)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 109 | Không có token | 401 / `00006` | PASS |
+| 110 | Chưa có danh mục | 200 / `00129`, `data = []` | PASS |
+| 111 | Người dùng thường xem danh sách | 200 / `00129`; sắp xếp theo tên, không lộ trường nội bộ | PASS |
+
+#### `POST /it4788/admin/category` — tạo danh mục (7/7)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 112 | Không có token | 401 / `00006` | PASS |
+| 113 | Người dùng thường gọi API | 403 / `00017` | PASS |
+| 114 | Thiếu `name` | 400 / `00131` | PASS |
+| 115 | `name` rỗng hoặc quá 50 ký tự | 400 / `00131` | PASS |
+| 116 | Tạo thành công | 201 / `00135`; tên được trim, lưu đúng vào DB | PASS |
+| 117 | Tên đã tồn tại | 409 / `00132`; DB không thêm bản ghi | PASS |
+| 118 | Tên trùng sau khi trim | 409 / `00132`; DB không thêm bản ghi | PASS |
+
+#### `PUT /it4788/admin/category` — sửa tên (7/7)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 119 | Không có token | 401 / `00006` | PASS |
+| 120 | Người dùng thường gọi API | 403 / `00017` | PASS |
+| 121 | Thiếu `name` hoặc `newName` | 400 / `00136` | PASS |
+| 122 | Tên cũ trùng tên mới | 400 / `00137` | PASS |
+| 123 | Tên cũ không tồn tại | 404 / `00138` | PASS |
+| 124 | Tên mới đã tồn tại | 409 / `00138`; bản ghi cũ giữ nguyên tên | PASS |
+| 125 | Sửa thành công | 200 / `00141`; tên mới được trim và lưu vào DB | PASS |
+
+#### `DELETE /it4788/admin/category` — xoá danh mục (5/5)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 126 | Không có token | 401 / `00006` | PASS |
+| 127 | Người dùng thường gọi API | 403 / `00017` | PASS |
+| 128 | Thiếu `name` | 400 / `00142` | PASS |
+| 129 | Danh mục không tồn tại | 404 / `00143` | PASS |
+| 130 | Xoá thành công | 200 / `00146`; DB không còn bản ghi | PASS |
+
+Ghi chú nhóm Danh mục:
+
+- `GET` mở cho **mọi tài khoản đã đăng nhập** vì app cần danh mục khi tạo thực phẩm; `POST`/`PUT`/`DELETE` chỉ dành cho role `admin`.
+- `admin.middleware.js` kiểm tra role trong access token và trả `00017` ("Truy cập bị từ chối…") khi không phải admin.
+- `PUT` nhận `{ name, newName }` đúng theo mã `00136` ("Thiếu thông tin name cũ, name mới"). Tên được trim và giới hạn 50 ký tự; model có unique index trên `name`.
+- Tên mới trùng danh mục khác dùng mã `00138` — tương ứng mã `00138x` "Tên mới đã tồn tại" trong đặc tả gốc ([tài liệu 02](02-GOP-Y-DAC-TA-API.md) mục 2.2).
+- `DELETE` nhận body `{ name }` theo đặc tả gốc; xem góp ý về body của `DELETE` ở [tài liệu 02](02-GOP-Y-DAC-TA-API.md) mục 2.6.
+
+### Nhóm API Đơn vị đo (`tests/unit.test.js`) — 22/22
+
+#### `GET /it4788/admin/unit` — lấy danh sách (3/3)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 131 | Không có token | 401 / `00006` | PASS |
+| 132 | Chưa có đơn vị | 200 / `00110`, `data = []` | PASS |
+| 133 | Người dùng thường xem danh sách | 200 / `00110`; sắp xếp theo tên, không lộ trường nội bộ | PASS |
+
+#### `POST /it4788/admin/unit` — tạo đơn vị (7/7)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 134 | Không có token | 401 / `00006` | PASS |
+| 135 | Người dùng thường gọi API | 403 / `00017` | PASS |
+| 136 | Thiếu `name` | 400 / `00112` | PASS |
+| 137 | `name` rỗng hoặc quá 50 ký tự | 400 / `00112` | PASS |
+| 138 | Tạo thành công | 201 / `00116`; tên được trim, lưu đúng vào DB | PASS |
+| 139 | Tên đã tồn tại | 409 / `00113`; DB không thêm bản ghi | PASS |
+| 140 | Tên trùng sau khi trim | 409 / `00113`; DB không thêm bản ghi | PASS |
+
+#### `PUT /it4788/admin/unit` — sửa tên (7/7)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 141 | Không có token | 401 / `00006` | PASS |
+| 142 | Người dùng thường gọi API | 403 / `00017` | PASS |
+| 143 | Thiếu `name` hoặc `newName` | 400 / `00117` | PASS |
+| 144 | Tên cũ trùng tên mới | 400 / `00118` | PASS |
+| 145 | Tên cũ không tồn tại | 404 / `00119` | PASS |
+| 146 | Tên mới đã tồn tại | 409 / `00113`; bản ghi cũ giữ nguyên tên | PASS |
+| 147 | Sửa thành công | 200 / `00122`; tên mới được trim và lưu vào DB | PASS |
+
+#### `DELETE /it4788/admin/unit` — xoá đơn vị (5/5)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 148 | Không có token | 401 / `00006` | PASS |
+| 149 | Người dùng thường gọi API | 403 / `00017` | PASS |
+| 150 | Thiếu `name` | 400 / `00123` | PASS |
+| 151 | Đơn vị không tồn tại | 404 / `00125` | PASS |
+| 152 | Xoá thành công | 200 / `00128`; DB không còn bản ghi | PASS |
+
+Ghi chú nhóm Đơn vị:
+
+- Cùng mô hình quyền với Danh mục: đọc mở cho tài khoản đã đăng nhập, ghi chỉ dành cho `admin`.
+- Đặc tả không có mã riêng cho "tên mới đã tồn tại" khi sửa đơn vị; nhóm dùng `00113` ("Đã tồn tại đơn vị có tên này") và khai báo thành hằng `UNIT_UPDATE_NEW_NAME_EXISTS`.
+- Việc tạo/sửa bắt lỗi trùng khoá `11000` của MongoDB để hai request đồng thời vẫn trả đúng `00113`/`00132` thay vì lỗi máy chủ.
+- Khi model `Food` được xây dựng, cần chặn hoặc xử lý việc xoá category/unit đang được thực phẩm tham chiếu (hiện chưa có ràng buộc vì `foods` chưa tồn tại).
 
 ## 4 vấn đề đã khắc phục
 

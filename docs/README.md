@@ -61,11 +61,22 @@ di-cho-tien-loi/
   - `DELETE /user/group` — trưởng nhóm xoá thành viên bằng `username` (`00106`; thiếu username `00107`, không phải trưởng nhóm `00104`, người không thuộc nhóm `00103`, không xoá được trưởng nhóm `00105`).
   - `POST /user/group/leave` — thành viên tự rời nhóm; nếu trưởng nhóm rời thì tự chuyển quyền cho thành viên còn lại, người cuối cùng rời thì xoá nhóm (`00108`).
   - Nền tảng: model `Group` (`name`, `adminId`, `members`), middleware `groupAdmin`, serializer `toPublicGroup`; xoá tài khoản cũng gỡ user khỏi nhóm và chuyển quyền trưởng nhóm nếu cần.
-- **Kiểm thử tự động**: 108 test (Auth + Tài khoản + Nhóm + rate limit), hiện **108/108 pass** — xem [báo cáo kiểm thử](test-report.md).
+- **Nhóm API Danh mục** (`routes/admin.route.js`, 4 endpoint) — danh mục dùng chung toàn hệ thống, do admin quản lý.
+  - `GET /admin/category` — lấy danh sách danh mục (`00129`); mọi tài khoản đã đăng nhập đều xem được.
+  - `POST /admin/category` — tạo danh mục với body `{ name }` (`00135`; thiếu tên `00131`, trùng tên `00132`).
+  - `PUT /admin/category` — đổi tên với body `{ name, newName }` (`00141`; thiếu trường `00136`, trùng tên cũ `00137`, không tìm thấy `00138`, tên mới đã tồn tại `00138`).
+  - `DELETE /admin/category` — xoá theo body `{ name }` (`00146`; thiếu tên `00142`, không tìm thấy `00143`).
+- **Nhóm API Đơn vị đo** (`routes/admin.route.js`, 4 endpoint) — đơn vị đo dùng chung toàn hệ thống, do admin quản lý.
+  - `GET /admin/unit` — lấy danh sách đơn vị (`00110`).
+  - `POST /admin/unit` — tạo đơn vị với body `{ name }` (`00116`; thiếu tên `00112`, trùng tên `00113`).
+  - `PUT /admin/unit` — đổi tên với body `{ name, newName }` (`00122`; thiếu trường `00117`, trùng tên cũ `00118`, không tìm thấy `00119`, tên mới đã tồn tại `00113`).
+  - `DELETE /admin/unit` — xoá theo body `{ name }` (`00128`; thiếu tên `00123`, không tìm thấy `00125`).
+  - Nền tảng: model `Category`/`Unit` (tên unique, trim, tối đa 50 ký tự), middleware `admin.middleware.js` (role `admin`, từ chối `00017`), serializer `toPublicLookup`.
+- **Kiểm thử tự động**: 152 test (Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + rate limit), hiện **152/152 pass** — xem [báo cáo kiểm thử](test-report.md).
 
 ### Chưa làm
 
-- Các model còn lại (Food, ShoppingList, Recipe, MealPlan...), routes/controllers cho các nhóm API còn lại.
+- Các model còn lại (Food, ShoppingList, Recipe, MealPlan...), routes/controllers cho các nhóm API còn lại (Thực phẩm, Tủ lạnh, Đi chợ, Bữa ăn, Công thức).
 - API quên mật khẩu và các API bổ sung khác.
 - Upload ảnh đại diện hiện lưu trên đĩa server (`server/uploads/`, đã gitignore); khi deploy cần chuyển sang Cloudinary để không mất ảnh.
 - Ứng dụng mobile và trang admin.
@@ -83,7 +94,7 @@ npm run dev     # http://localhost:5000/it4788/health
 
 ```bash
 cd server
-npm test        # 108 test API Auth + Tài khoản + Nhóm + rate limit, dùng MongoDB in-memory, không cần .env
+npm test        # 152 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + rate limit, dùng MongoDB in-memory, không cần .env
 ```
 
 ## Tài liệu
@@ -92,7 +103,7 @@ npm test        # 108 test API Auth + Tài khoản + Nhóm + rate limit, dùng M
 |---|---|
 | [01 – Kế hoạch & Kiến trúc](01-KE-HOACH-KIEN-TRUC.md) | Kiến trúc hệ thống, thiết kế database, cấu trúc thư mục, danh sách màn hình, lộ trình 8 tuần, phân công |
 | [02 – Rà soát đặc tả API](02-GOP-Y-DAC-TA-API.md) | 16 lỗi phát hiện trong mô tả API của đề và đề xuất sửa đổi (phần tính điểm cộng) |
-| [Báo cáo kiểm thử](test-report.md) | 108 test API Auth + Tài khoản + Nhóm: ma trận case, kết quả, phát hiện và cách chạy |
+| [Báo cáo kiểm thử](test-report.md) | 152 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn vị: ma trận case, kết quả, phát hiện và cách chạy |
 
 ## Bắt đầu
 

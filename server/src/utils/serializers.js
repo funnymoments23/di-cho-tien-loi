@@ -30,4 +30,10 @@ const toPublicGroup = (group) => ({
   createdAt: group.createdAt,
 });
 
-module.exports = { toPublicUser, toPublicGroup };
+/** Chuyển document Category hoặc Unit (chỉ có `name`) thành object trả cho client. */
+const toPublicLookup = (item) => ({
+  id: item._id,
+  name: item.name,
+});
+
+module.exports = { toPublicUser, toPublicGroup, toPublicLookup };
