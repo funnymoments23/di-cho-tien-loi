@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const {notFound, errorHandler} = require('./middlewares/error.middleware')
 const RC = require('./constants/responseCode');
 const {sendSuccess} = require('./utils/response');
@@ -8,6 +9,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Ảnh đại diện upload lên được phục vụ tĩnh (xem middlewares/upload.middleware.js)
+app.use('/it4788/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 
 // Tất cả API nằm dưới prefix /it4788

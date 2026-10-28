@@ -95,17 +95,24 @@ const RESPONSE_CODE = Object.freeze({
 
     // ===== Nhóm =====
     GROUP_CREATE_ALREADY_IN_GROUP: def('00093', CONFLICT, 'Không thể tạo nhóm, bạn đã thuộc về một nhóm rồi'),
+    // Đặc tả gốc không có body cho POST /user/group; nhóm bổ sung tên nhóm (docs/02 mục 1.3)
+    // nên cần thêm mã cho trường hợp thiếu/sai tên nhóm.
+    GROUP_CREATE_MISSING_NAME: def('00094', BAD_REQUEST, 'Vui lòng cung cấp tên nhóm hợp lệ.'),
     GROUP_CREATE_SUCCESS: def('00095', CREATED, 'Tạo nhóm thành công'),
     GROUP_NOT_IN_GROUP: def('00096', FORBIDDEN, 'Bạn không thuộc về nhóm nào'),
     GROUP_GET_MEMBERS_SUCCESS: def('00098', OK, 'Thành công'),
+    GROUP_GET_INFO_SUCCESS: def('00098', OK, 'Thành công'),
     GROUP_ADD_MEMBER_ALREADY_IN_GROUP: def('00099', CONFLICT, 'Người này đã thuộc về một nhóm'),
     GROUP_ADD_MEMBER_USER_NOT_FOUND: def('00099', NOT_FOUND, 'Không tồn tại user này'),
     GROUP_ADD_MEMBER_MISSING_USERNAME: def('00100', BAD_REQUEST, 'Thiếu username'),
+    GROUP_ADD_MEMBER_NOT_ADMIN: def('00101', FORBIDDEN, 'Bạn không phải trưởng nhóm, không thể thêm thành viên.'),
     GROUP_ADD_MEMBER_SUCCESS: def('00102', OK, 'Người dùng thêm vào nhóm thành công'),
     GROUP_DELETE_MEMBER_NOT_IN_GROUP: def('00103', NOT_FOUND, 'Người này chưa vào nhóm nào'),
     GROUP_DELETE_MEMBER_NOT_ADMIN: def('00104', FORBIDDEN, 'Bạn không phải admin, không thể xóa'),
+    GROUP_DELETE_MEMBER_IS_ADMIN: def('00105', BAD_REQUEST, 'Không thể xóa trưởng nhóm. Hãy chuyển quyền trưởng nhóm hoặc rời nhóm.'),
     GROUP_DELETE_MEMBER_SUCCESS: def('00106', OK, 'Xóa thành công'),
     GROUP_DELETE_MEMBER_MISSING_USERNAME: def('00107', BAD_REQUEST, 'Thiếu username'),
+    GROUP_LEAVE_SUCCESS: def('00108', OK, 'Rời nhóm thành công'),
     LOGS_GET_SUCCESS: def('00109', OK, 'Lấy log hệ thống thành công'),
 
     // ===== Đơn vị đo (unit) =====

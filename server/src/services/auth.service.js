@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const User = require('../models/user.models');
 const RC = require('../constants/responseCode');
 const { fail } = require('../utils/response');
+const { toPublicUser } = require('../utils/serializers');
 const { sendVerificationCode: sendVerificationEmail } = require('../utils/email');
 const {
   generateTokenPair,
@@ -17,20 +18,6 @@ const {
 const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS) || 10;
 const CODE_TTL_MINUTES = Number(process.env.VERIFICATION_CODE_TTL_MINUTES) || 10;
 const CODE_TTL_MS = CODE_TTL_MINUTES * 60 * 1000;
-
-/** Bỏ các trường nội bộ (password, refreshToken, mã xác minh) trước khi trả client. */
-const toPublicUser = (user) => ({
-  id: user._id,
-  email: user.email,
-  name: user.name,
-  username: user.username ?? null,
-  avatar: user.avatar ?? null,
-  language: user.language,
-  timezone: user.timezone,
-  role: user.role,
-  groupId: user.groupId,
-  isVerified: user.isVerified,
-});
 
 const generateVerificationCode = () => String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
 

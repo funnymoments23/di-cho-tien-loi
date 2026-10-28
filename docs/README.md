@@ -36,7 +36,7 @@ di-cho-tien-loi/
   - `constants/responseCode.js`: bảng mã response (code 5 chữ số, HTTP status, message) theo đề.
   - `utils/response.js` (`sendSuccess`, `fail`) và `utils/AppError.js`.
   - `middlewares/error.middleware.js`: xử lý 404 và lỗi tập trung (kể cả JSON sai định dạng).
-- Model `User` ([user.models.js](../server/src/models/user.models.js)): email, mật khẩu, tên, avatar, ngôn ngữ, múi giờ, device token, xác minh email, refresh token, role (`user`/`admin`), `groupId`.
+- Model `User` ([user.models.js](../server/src/models/user.models.js)): email, mật khẩu, tên, username, avatar, giới tính, ngày sinh, ngôn ngữ, múi giờ, device token, xác minh email, refresh token, role (`user`/`admin`), `groupId`.
 - **Nhóm API Auth** (`routes/user.route.js`): 6 endpoint chạy được trên Postman.
   - `POST /it4788/user` — đăng ký, gửi mã 6 số qua email (`00035`).
   - `POST /it4788/user/verify-email` — nhập `{ code, token }` (`00058`).
@@ -46,13 +46,28 @@ di-cho-tien-loi/
   - `POST /it4788/user/logout` — yêu cầu Bearer token, thu hồi refresh token (`00050`).
   - Nền tảng: `utils/jwt.js` (2 secret, `typ` chống dùng lẫn token, lưu refresh token dạng SHA-256), `middlewares/auth.middleware.js`, `middlewares/validate.middleware.js` (Joi → mã lỗi của đề), `utils/email.js` (Nodemailer; thiếu SMTP ở dev thì in mã ra console).
   - Rate limit in-memory cho đăng ký / đăng nhập / gửi mã / xác minh email (`middlewares/rateLimit.middleware.js`), vượt ngưỡng trả `00024`.
-- **Kiểm thử tự động nhóm API Auth**: 49 test (Jest + Supertest + MongoDB in-memory), chạy `npm test`,
-  hiện **49/49 pass** — xem [báo cáo kiểm thử](docs/test-report.md).
+- **Kiểm thử tự động nhóm API Auth**: 49 test (Jest + Supertest + MongoDB in-memory), chạy `npm test`.
+- **Nhóm API Tài khoản** (`GET/PUT/DELETE /it4788/user`, `POST /it4788/user/change-password`, `PUT /it4788/user/device-token`) — xem chi tiết bên dưới.
+  - `GET /user` — xem hồ sơ của chính mình (`00089`).
+  - `PUT /user` — sửa `name`, `username`, `gender`, `birthday`, `language`, `timezone`, `avatar` (`00086`); nhận JSON hoặc `multipart/form-data` với ảnh ở field `image`; Joi loại bỏ `email`/`role`/`isVerified` nên không thể tự nâng quyền.
+  - `DELETE /user` — xoá tài khoản (`00092`).
+  - `POST /user/change-password` — kiểm tra mật khẩu cũ (`00072`), không trùng mật khẩu cũ (`00073`), thành công `00076` và thu hồi refresh token cũ.
+  - `PUT /user/device-token` — cập nhật Expo push token (API bổ sung, xem [tài liệu 02](02-GOP-Y-DAC-TA-API.md) mục 3.4).
+- **Nhóm API Nhóm gia đình** (`routes/group.route.js`): 6 endpoint.
+  - `POST /user/group` — tạo nhóm với body `{ groupName }`, người tạo thành trưởng nhóm (`00095`; đã có nhóm `00093`, thiếu tên `00094`).
+  - `GET /user/group` — xem nhóm và danh sách thành viên (`00098`; chưa vào nhóm `00096`).
+  - `GET /user/group/info` — tên nhóm, trưởng nhóm, số thành viên (API bổ sung, mục 4.4 tài liệu 02).
+  - `POST /user/group/add` — trưởng nhóm thêm thành viên bằng `username` (`00102`; thiếu username `00100`, không tồn tại/đã có nhóm `00099`, không phải trưởng nhóm `00101`).
+  - `DELETE /user/group` — trưởng nhóm xoá thành viên bằng `username` (`00106`; thiếu username `00107`, không phải trưởng nhóm `00104`, người không thuộc nhóm `00103`, không xoá được trưởng nhóm `00105`).
+  - `POST /user/group/leave` — thành viên tự rời nhóm; nếu trưởng nhóm rời thì tự chuyển quyền cho thành viên còn lại, người cuối cùng rời thì xoá nhóm (`00108`).
+  - Nền tảng: model `Group` (`name`, `adminId`, `members`), middleware `groupAdmin`, serializer `toPublicGroup`; xoá tài khoản cũng gỡ user khỏi nhóm và chuyển quyền trưởng nhóm nếu cần.
+- **Kiểm thử tự động**: 108 test (Auth + Tài khoản + Nhóm + rate limit), hiện **108/108 pass** — xem [báo cáo kiểm thử](test-report.md).
 
 ### Chưa làm
 
-- Các model còn lại (Group, Food, ShoppingList, Recipe, MealPlan...), routes/controllers cho các nhóm API còn lại.
-- API tài khoản (`GET/PUT/DELETE /user`, `change-password`), API nhóm, và các API bổ sung.
+- Các model còn lại (Food, ShoppingList, Recipe, MealPlan...), routes/controllers cho các nhóm API còn lại.
+- API quên mật khẩu và các API bổ sung khác.
+- Upload ảnh đại diện hiện lưu trên đĩa server (`server/uploads/`, đã gitignore); khi deploy cần chuyển sang Cloudinary để không mất ảnh.
 - Ứng dụng mobile và trang admin.
 
 ### Chạy server
@@ -68,16 +83,16 @@ npm run dev     # http://localhost:5000/it4788/health
 
 ```bash
 cd server
-npm test        # 49 test API Auth + rate limit, dùng MongoDB in-memory, không cần .env
+npm test        # 108 test API Auth + Tài khoản + Nhóm + rate limit, dùng MongoDB in-memory, không cần .env
 ```
 
 ## Tài liệu
 
 | Tài liệu | Nội dung |
 |---|---|
-| [01 – Kế hoạch & Kiến trúc](docs/01-KE-HOACH-KIEN-TRUC.md) | Kiến trúc hệ thống, thiết kế database, cấu trúc thư mục, danh sách màn hình, lộ trình 8 tuần, phân công |
-| [02 – Rà soát đặc tả API](docs/02-GOP-Y-DAC-TA-API.md) | 16 lỗi phát hiện trong mô tả API của đề và đề xuất sửa đổi (phần tính điểm cộng) |
-| [Báo cáo kiểm thử](docs/test-report.md) | 45 test API Auth: ma trận case, kết quả, phát hiện và cách chạy |
+| [01 – Kế hoạch & Kiến trúc](01-KE-HOACH-KIEN-TRUC.md) | Kiến trúc hệ thống, thiết kế database, cấu trúc thư mục, danh sách màn hình, lộ trình 8 tuần, phân công |
+| [02 – Rà soát đặc tả API](02-GOP-Y-DAC-TA-API.md) | 16 lỗi phát hiện trong mô tả API của đề và đề xuất sửa đổi (phần tính điểm cộng) |
+| [Báo cáo kiểm thử](test-report.md) | 108 test API Auth + Tài khoản + Nhóm: ma trận case, kết quả, phát hiện và cách chạy |
 
 ## Bắt đầu
 

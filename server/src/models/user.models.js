@@ -6,6 +6,8 @@ const userSchema = new mongoose.Schema({
   name:     { type: String, required: true, trim: true },
   username: { type: String, unique: true, sparse: true, trim: true },
   avatar:   { type: String, default: null },
+  gender:   { type: String, enum: ['female', 'male', 'other'], default: null },
+  birthday: { type: Date, default: null },
   language: { type: String, enum: ['vi', 'en'], default: 'vi' },
   timezone: { type: String, default: 'Asia/Ho_Chi_Minh' },
   deviceToken: { type: String, default: null },

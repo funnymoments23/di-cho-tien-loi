@@ -2,7 +2,9 @@ const express = require('express');
 const auth = require('../middlewares/auth.middleware');
 const validate = require('../middlewares/validate.middleware');
 const { authRateLimiter } = require('../middlewares/rateLimit.middleware');
+const { uploadAvatar } = require('../middlewares/upload.middleware');
 const authController = require('../controllers/auth.controller');
+const userController = require('../controllers/user.controller');
 const {
   registerSchema,
   loginSchema,
@@ -10,6 +12,11 @@ const {
   verifyEmailSchema,
   sendVerificationCodeSchema,
 } = require('../validations/auth.validation');
+const {
+  updateUserSchema,
+  changePasswordSchema,
+  deviceTokenSchema,
+} = require('../validations/user.validation');
 const RC = require('../constants/responseCode');
 
 const router = express.Router();
@@ -78,5 +85,54 @@ router.post(
 );
 
 router.post('/logout', auth, authController.logout); // 00006 nếu thiếu token
+
+// ===== Nhóm Tài khoản (hồ sơ cá nhân) =====
+
+// GET /user — xem hồ sơ của chính mình (00089)
+router.get('/', auth, userController.getProfile);
+
+// PUT /user — sửa hồ sơ, nhận JSON hoặc multipart/form-data (ảnh ở field `image`)
+router.put(
+  '/',
+  auth,
+  uploadAvatar,
+  validate(updateUserSchema, {
+    byField: {
+      name: RC.EDIT_USER_INVALID_NAME,           // 00077
+      username: RC.EDIT_USER_INVALID_USERNAME,   // 00081
+      gender: RC.EDIT_USER_INVALID_GENDER,       // 00078
+      birthday: RC.EDIT_USER_INVALID_BIRTHDAY,   // 00080
+      language: RC.EDIT_USER_INVALID_LANGUAGE,   // 00079
+    },
+    fallback: RC.EDIT_USER_INVALID_NAME,
+  }),
+  userController.updateProfile
+);
+
+// DELETE /user — xoá tài khoản của chính mình (00092)
+router.delete('/', auth, userController.deleteAccount);
+
+// POST /user/change-password — đổi mật khẩu khi đang đăng nhập (00076)
+router.post(
+  '/change-password',
+  auth,
+  authRateLimiter,
+  validate(changePasswordSchema, {
+    byField: {
+      oldPassword: RC.CHANGE_PASSWORD_INVALID_FORMAT, // 00069
+      newPassword: RC.CHANGE_PASSWORD_INVALID_FORMAT, // 00069
+    },
+    fallback: RC.CHANGE_PASSWORD_INVALID_FORMAT,
+  }),
+  userController.changePassword
+);
+
+// PUT /user/device-token — cập nhật Expo push token (đặc tả thiếu, xem docs/02 mục 3.4)
+router.put(
+  '/device-token',
+  auth,
+  validate(deviceTokenSchema, { fallback: RC.REGISTER_MISSING_FIELDS }), // 00025
+  userController.updateDeviceToken
+);
 
 module.exports = router;

@@ -1,10 +1,10 @@
-# Báo cáo kiểm thử — nhóm API Auth
+# Báo cáo kiểm thử — nhóm API Auth, Tài khoản & Nhóm
 
-- **Ngày chạy:** 28/10/2026 (cập nhật sau khi khắc phục 4 vấn đề)
-- **Phạm vi:** 6 endpoint Auth + endpoint health (`server/src/routes/user.route.js`) + rate limit
+- **Ngày chạy:** 28/10/2026 (bổ sung nhóm API Nhóm gia đình)
+- **Phạm vi:** 6 endpoint Auth + 5 endpoint Tài khoản + 6 endpoint Nhóm (`server/src/routes/user.route.js`, `group.route.js`) + endpoint health + rate limit
 - **Công cụ:** Jest 30.5.2, Supertest 7.3.1, mongodb-memory-server 11.3.0
 - **Môi trường:** Windows, Node.js v24.11.0, MongoDB in-memory 8.2.6
-- **Kết quả:** **49/49 test PASS**, 2 test suite, ~2,2 giây (sau khi binary Mongo đã tải sẵn)
+- **Kết quả:** **108/108 test PASS**, 4 test suite, ~4,4 giây (sau khi binary Mongo đã tải sẵn)
 
 ## Cách chạy
 
@@ -16,7 +16,9 @@ npm test             # jest --runInBand
 
 Cấu hình: [`server/jest.config.js`](../server/jest.config.js), biến môi trường test ở
 [`server/tests/setup-env.js`](../server/tests/setup-env.js), test suite ở
-[`server/tests/auth.test.js`](../server/tests/auth.test.js) và
+[`server/tests/auth.test.js`](../server/tests/auth.test.js),
+[`server/tests/user.test.js`](../server/tests/user.test.js),
+[`server/tests/group.test.js`](../server/tests/group.test.js) và
 [`server/tests/rate-limit.test.js`](../server/tests/rate-limit.test.js).
 
 Đặc điểm bộ test:
@@ -24,7 +26,7 @@ Cấu hình: [`server/jest.config.js`](../server/jest.config.js), biến môi tr
 - Dùng **MongoDB in-memory** nên không chạm vào DB thật, không cần `.env`, chạy được trên CI.
 - **Mock `utils/email.js`** — không gửi email thật; mã 6 số lấy từ `mock.calls` để test luồng verify.
 - `BCRYPT_ROUNDS=4` cho nhanh; JWT secret cố định trong `setup-env.js`.
-- `User.deleteMany({})` trước mỗi test → các test độc lập, không phụ thuộc thứ tự.
+- `User.deleteMany({})` + `Group.deleteMany({})` trước mỗi test → các test độc lập, không phụ thuộc thứ tự.
 - Rate limit tắt mặc định trong bộ test chức năng (`AUTH_RATE_LIMIT_MAX=0`), có test riêng với ngưỡng thấp.
 
 ## Kết quả theo endpoint
@@ -119,6 +121,144 @@ Kiểm tra thêm ở case 6: mật khẩu trong DB là hash bcrypt (không phả
 | 47 | Quá ngưỡng (3 request/IP/15 phút) | 3 request đầu 400, request 4 → 429 / `00024` + header `Retry-After` | PASS |
 | 48 | Áp dụng cho đăng ký, gửi mã, xác minh email | Mỗi endpoint: request thứ 2 khi ngưỡng = 1 → 429 / `00024` | PASS |
 | 49 | `AUTH_RATE_LIMIT_MAX=0` | Tắt hoàn toàn, 10 request liên tiếp không bị chặn | PASS |
+
+### Nhóm API Tài khoản (`tests/user.test.js`) — 27/27
+
+#### `GET /it4788/user` — xem hồ sơ (4/4)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 50 | Không có token | 401 / `00006` | PASS |
+| 51 | Token rác | 401 / `00012` | PASS |
+| 52 | Token hợp lệ | 200 / `00089`; không lộ `password`, `refreshToken`, `verificationCode` | PASS |
+| 53 | Token hợp lệ nhưng user đã bị xoá | 404 / `00052` | PASS |
+
+#### `PUT /it4788/user` — sửa hồ sơ (11/11)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 54 | Không có token | 401 / `00006` | PASS |
+| 55 | Tên 2 ký tự | 400 / `00077` | PASS |
+| 56 | Username 2 ký tự | 400 / `00081` | PASS |
+| 57 | Username đã có người dùng | 409 / `00084` | PASS |
+| 58 | Giới tính ngoài `female/male/other` | 400 / `00078` | PASS |
+| 59 | Ngày sinh sai định dạng | 400 / `00080` | PASS |
+| 60 | Ngôn ngữ ngoài `vi/en` | 400 / `00079` | PASS |
+| 61 | Dữ liệu hợp lệ | 200 / `00086`; lưu đủ `name`, `username`, `gender`, `birthday`, `language`, `timezone`, `avatar` | PASS |
+| 62 | Gửi kèm `email`, `role`, `isVerified`, `groupId` | Joi loại bỏ; DB không đổi các trường bảo vệ | PASS |
+| 63 | Upload `multipart/form-data` field `image` | 200 / `00086`; `avatar` = `/it4788/uploads/avatars/...`, file tồn tại | PASS |
+| 64 | Upload tệp không phải ảnh | 400 / `00158` | PASS |
+
+#### `POST /it4788/user/change-password` — đổi mật khẩu (7/7)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 65 | Không có token | 401 / `00006` | PASS |
+| 66 | Thiếu trường | 400 / `00069` | PASS |
+| 67 | Mật khẩu mới 5 ký tự | 400 / `00069` | PASS |
+| 68 | Mật khẩu cũ sai | 400 / `00072` | PASS |
+| 69 | Mật khẩu mới trùng mật khẩu cũ | 400 / `00073` | PASS |
+| 70 | Đổi thành công | 200 / `00076`; mật khẩu cũ không đăng nhập được, mật khẩu mới đăng nhập được | PASS |
+| 71 | Dùng refresh token cũ sau khi đổi | 401 / `00063` (đã bị thu hồi) | PASS |
+
+#### `DELETE /it4788/user` — xoá tài khoản (2/2)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 72 | Không có token | 401 / `00006` | PASS |
+| 73 | Xoá thành công | 200 / `00092`; DB không còn user, token cũ gọi lại trả `00052` | PASS |
+
+#### `PUT /it4788/user/device-token` — cập nhật push token (3/3)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 74 | Không có token | 401 / `00006` | PASS |
+| 75 | Thiếu `deviceToken` | 400 / `00025` | PASS |
+| 76 | Token hợp lệ | 200 / `00086`; `deviceToken` được lưu vào DB | PASS |
+
+Ghi chú nhóm Tài khoản:
+
+- `PUT /user` nhận cả JSON và `multipart/form-data` (ảnh field `image`, tối đa 5MB, chỉ nhận `image/*`).
+  Ảnh hiện lưu ở `server/uploads/avatars/` và phục vụ qua `/it4788/uploads/...`; khi deploy nên chuyển sang Cloudinary.
+- Đổi mật khẩu **thu hồi refresh token** đang lưu để các phiên cũ không tiếp tục được; access token hiện tại vẫn dùng được tới khi hết hạn (1 giờ).
+- `PUT /user/device-token` là API bổ sung (đặc tả gốc không có), chưa có mã response riêng nên dùng `00086`/`00025`.
+- `DELETE /user` gỡ user khỏi nhóm trước khi xoá tài khoản: thành viên bị bỏ khỏi `members`, trưởng nhóm rời đi thì chuyển quyền cho thành viên còn lại (hoặc xoá nhóm nếu không còn ai). Các dữ liệu khác (danh sách mua sắm, tủ lạnh...) chưa dọn vì model chưa được xây dựng.
+
+### Nhóm API Nhóm gia đình (`tests/group.test.js`) — 32/32
+
+#### `POST /it4788/user/group` — tạo nhóm (5/5)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 77 | Không có token | 401 / `00006` | PASS |
+| 78 | Thiếu `groupName` | 400 / `00094` | PASS |
+| 79 | `groupName` rỗng hoặc quá 50 ký tự | 400 / `00094` | PASS |
+| 80 | Tạo thành công | 201 / `00095`; người tạo là `adminId` + thành viên đầu tiên, `user.groupId` được gán | PASS |
+| 81 | Tạo nhóm lần 2 | 409 / `00093`; DB chỉ có 1 nhóm | PASS |
+
+#### `GET /it4788/user/group` — xem nhóm (3/3)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 82 | Không có token | 401 / `00006` | PASS |
+| 83 | Chưa vào nhóm | 403 / `00096` | PASS |
+| 84 | Có nhóm | 200 / `00098`; đủ thành viên, không lộ `password`/`refreshToken`/`verificationCode` | PASS |
+
+#### `GET /it4788/user/group/info` — thông tin nhóm (3/3)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 85 | Không có token | 401 / `00006` | PASS |
+| 86 | Chưa vào nhóm | 403 / `00096` | PASS |
+| 87 | Trưởng nhóm / thành viên | 200 / `00098`; `isAdmin` đúng, trả tên + username trưởng nhóm, `memberCount` | PASS |
+
+#### `POST /it4788/user/group/add` — thêm thành viên (7/7)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 88 | Không có token | 401 / `00006` | PASS |
+| 89 | Người gọi chưa vào nhóm | 403 / `00096` | PASS |
+| 90 | Thiếu username / username 2 ký tự | 400 / `00100` | PASS |
+| 91 | Username không tồn tại | 404 / `00099` | PASS |
+| 92 | Người được thêm đã thuộc nhóm khác | 409 / `00099` | PASS |
+| 93 | Thành viên (không phải trưởng nhóm) thêm người | 403 / `00101` | PASS |
+| 94 | Thêm thành công | 200 / `00102`; gán `groupId`, cập nhật `members` | PASS |
+
+#### `DELETE /it4788/user/group` — xoá thành viên (7/7)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 95 | Không có token | 401 / `00006` | PASS |
+| 96 | Người gọi chưa vào nhóm | 403 / `00096` | PASS |
+| 97 | Thiếu username | 400 / `00107` | PASS |
+| 98 | Thành viên (không phải trưởng nhóm) xoá người | 403 / `00104` | PASS |
+| 99 | Người cần xoá không thuộc nhóm | 404 / `00103` | PASS |
+| 100 | Trưởng nhóm tự xoá mình qua API xoá thành viên | 400 / `00105` | PASS |
+| 101 | Xoá thành công | 200 / `00106`; user vẫn tồn tại, `groupId=null`, bỏ khỏi `members` | PASS |
+
+#### `POST /it4788/user/group/leave` — rời nhóm (5/5)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 102 | Không có token | 401 / `00006` | PASS |
+| 103 | Chưa vào nhóm | 403 / `00096` | PASS |
+| 104 | Thành viên rời nhóm | 200 / `00108`; nhóm và trưởng nhóm giữ nguyên | PASS |
+| 105 | Trưởng nhóm rời nhóm | 200 / `00108`; chuyển quyền cho thành viên còn lại, quyền trưởng nhóm dùng được ngay | PASS |
+| 106 | Người cuối cùng rời nhóm | 200 / `00108`; nhóm bị xoá | PASS |
+
+#### `DELETE /it4788/user` — dọn quan hệ nhóm (2/2)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 107 | Trưởng nhóm xoá tài khoản | 200 / `00092`; chuyển quyền trưởng nhóm cho thành viên còn lại | PASS |
+| 108 | Thành viên xoá tài khoản | 200 / `00092`; bỏ khỏi `members`, `memberCount` giảm | PASS |
+
+Ghi chú nhóm Nhóm:
+
+- `POST /user/group` được bổ sung body `{ groupName }` theo đề xuất ở [tài liệu 02](02-GOP-Y-DAC-TA-API.md) mục 1.3; mã `00094` là mã mới trong dải trống của nhóm.
+- `GET /user/group/info` và `POST /user/group/leave` là hai API bổ sung theo mục 4.4 tài liệu 02. Quyền trưởng nhóm được kiểm tra bằng middleware `groupAdmin`.
+- Các mã mới dùng dải trống: `00094` (thiếu tên nhóm), `00101` (không phải trưởng nhóm khi thêm), `00105` (không xoá được trưởng nhóm), `00108` (rời nhóm).
+- Tạo nhóm/thêm thành viên dùng cập nhật có điều kiện (`groupId = null`) để tránh 2 request đồng thời đưa một người vào 2 nhóm.
 
 ## 4 vấn đề đã khắc phục
 
