@@ -1,0 +1,71 @@
+# ===== Phụ thuộc =====
+node_modules/
+jspm_packages/
+.pnp
+.pnp.js
+
+# ===== Biến môi trường & bí mật =====
+# Giữ lại file mẫu .env.example để người khác biết cần cấu hình gì.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.keystore
+
+# ===== Log & file tạm khi chạy =====
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.pid
+*.seed
+
+# ===== Kết quả build =====
+dist/
+build/
+out/
+.next/
+.nuxt/
+*.tsbuildinfo
+
+# ===== Test & coverage =====
+coverage/
+.nyc_output/
+*.lcov
+jest-cache/
+.jest-cache/
+
+# ===== Expo / React Native (mobile/, chuẩn bị cho giai đoạn sau) =====
+.expo/
+.expo-shared/
+web-build/
+.metro-cache/
+*.jks
+*.mobileprovision
+
+# ===== IDE / trình soạn thảo =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ===== Hệ điều hành =====
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ===== File tạm của Office (Word/Excel) =====
+~$*
+*.tmp
+
+# ===== File merge còn sót =====
+*.orig
+*.rej
