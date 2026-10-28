@@ -1,10 +1,10 @@
 # Báo cáo kiểm thử — nhóm API Auth
 
-- **Ngày chạy:** 28/10/2026
-- **Phạm vi:** 6 endpoint Auth + endpoint health (`server/src/routes/user.route.js`)
+- **Ngày chạy:** 28/10/2026 (cập nhật sau khi khắc phục 4 vấn đề)
+- **Phạm vi:** 6 endpoint Auth + endpoint health (`server/src/routes/user.route.js`) + rate limit
 - **Công cụ:** Jest 30.5.2, Supertest 7.3.1, mongodb-memory-server 11.3.0
 - **Môi trường:** Windows, Node.js v24.11.0, MongoDB in-memory 8.2.6
-- **Kết quả:** **45/45 test PASS**, 1 test suite, ~2,1 giây (sau khi binary Mongo đã tải sẵn)
+- **Kết quả:** **49/49 test PASS**, 2 test suite, ~2,2 giây (sau khi binary Mongo đã tải sẵn)
 
 ## Cách chạy
 
@@ -16,7 +16,8 @@ npm test             # jest --runInBand
 
 Cấu hình: [`server/jest.config.js`](../server/jest.config.js), biến môi trường test ở
 [`server/tests/setup-env.js`](../server/tests/setup-env.js), test suite ở
-[`server/tests/auth.test.js`](../server/tests/auth.test.js).
+[`server/tests/auth.test.js`](../server/tests/auth.test.js) và
+[`server/tests/rate-limit.test.js`](../server/tests/rate-limit.test.js).
 
 Đặc điểm bộ test:
 
@@ -24,6 +25,7 @@ Cấu hình: [`server/jest.config.js`](../server/jest.config.js), biến môi tr
 - **Mock `utils/email.js`** — không gửi email thật; mã 6 số lấy từ `mock.calls` để test luồng verify.
 - `BCRYPT_ROUNDS=4` cho nhanh; JWT secret cố định trong `setup-env.js`.
 - `User.deleteMany({})` trước mỗi test → các test độc lập, không phụ thuộc thứ tự.
+- Rate limit tắt mặc định trong bộ test chức năng (`AUTH_RATE_LIMIT_MAX=0`), có test riêng với ngưỡng thấp.
 
 ## Kết quả theo endpoint
 
@@ -54,7 +56,7 @@ Kiểm tra thêm ở case 6: mật khẩu trong DB là hash bcrypt (không phả
 | 9 | Thiếu email | 400 / `00005` | PASS |
 | 10 | Email sai định dạng | 400 / `00026` | PASS |
 | 11 | Email không tồn tại | 404 / `00036` | PASS |
-| 12 | Tài khoản đã xác minh | 200, `alreadyVerified=true`, **không gửi email** | PASS |
+| 12 | Tài khoản đã xác minh | 200 / **`00058`** + `alreadyVerified=true`, `user`; **không gửi email** | PASS |
 | 13 | Tài khoản chưa xác minh | 200 / `00048`, `alreadyVerified=false`; mã + token mới verify được | PASS |
 
 ### `POST /it4788/user/verify-email` — xác minh email (9/9)
@@ -63,7 +65,7 @@ Kiểm tra thêm ở case 6: mật khẩu trong DB là hash bcrypt (không phả
 |---|---|---|---|
 | 14 | Thiếu `code` | 400 / `00053` | PASS |
 | 15 | `code="abc123"` | 400 / `00054` | PASS |
-| 16 | Thiếu `token` | 400 / `00053` (xem ghi chú 1) | PASS |
+| 16 | Thiếu `token` | **401 / `00055`** | PASS |
 | 17 | `token` rác | 401 / `00055` | PASS |
 | 18 | Mã sai | 400 / `00054`, `isVerified` vẫn `false` | PASS |
 | 19 | Mã quá hạn (set `verificationCodeExpiresAt` về quá khứ) | 400 / `00054` | PASS |
@@ -98,7 +100,7 @@ Kiểm tra thêm ở case 6: mật khẩu trong DB là hash bcrypt (không phả
 | 38 | Dùng lại refresh token cũ sau rotate | 401 / `00063` | PASS |
 | 39 | Refresh token mới sau rotate | Dùng được, 200 / `00065` | PASS |
 
-### `POST /it4788/user/logout` — đăng xuất (6/6)
+### `POST /it4788/user/logout` — đăng xuất (7/7)
 
 | # | Case | Kỳ vọng | Kết quả |
 |---|---|---|---|
@@ -108,22 +110,35 @@ Kiểm tra thêm ở case 6: mật khẩu trong DB là hash bcrypt (không phả
 | 43 | Access token hết hạn | 401 / `00011` | PASS |
 | 44 | Dùng refresh token làm Bearer token | 401 / `00012` | PASS |
 | 45 | Logout hợp lệ | 200 / `00050`; refresh token bị thu hồi (`null` trong DB), dùng lại trả `00063` | PASS |
+| 46 | Token hợp lệ nhưng user đã bị xoá | **404 / `00052`** | PASS |
 
-## Ghi chú & phát hiện
+### Rate limit (`tests/rate-limit.test.js`) — 3/3
 
-1. **`verify-email` thiếu `token` trả `00053` thay vì `00055`.** `validate()` dùng một `fallback`
-   chung cho mọi trường thiếu, nên thiếu `token` bị coi là "thiếu mã xác nhận". Test đang ghi nhận
-   đúng hành vi hiện tại; nếu muốn đúng đặc tả, cần cho `validate()` map riêng mã lỗi cho trường hợp
-   thiếu từng field (ví dụ `missingByField`).
-2. **`send-verification-code` với tài khoản đã xác minh** trả `00048` ("Mã đã được gửi đến email…")
-   kèm `alreadyVerified: true`, trong khi thực tế không gửi email nào. Nên có message/mã riêng để
-   client không hiển thị sai.
-3. **Chưa có rate limit** cho login/register (đề có mã `00024 – Too many requests`). Chưa test vì
-   chưa triển khai.
-4. **Logout không kiểm tra user còn tồn tại**: access token hợp lệ của user đã bị xoá vẫn trả `00050`.
-   Không nghiêm trọng nhưng nên biết.
-5. `.env` hiện không có `JWT_VERIFY_SECRET`, nên verification token dùng chung secret với access token
-   (code vẫn an toàn nhờ claim `typ`). Nên bổ sung secret riêng cho production.
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 47 | Quá ngưỡng (3 request/IP/15 phút) | 3 request đầu 400, request 4 → 429 / `00024` + header `Retry-After` | PASS |
+| 48 | Áp dụng cho đăng ký, gửi mã, xác minh email | Mỗi endpoint: request thứ 2 khi ngưỡng = 1 → 429 / `00024` | PASS |
+| 49 | `AUTH_RATE_LIMIT_MAX=0` | Tắt hoàn toàn, 10 request liên tiếp không bị chặn | PASS |
+
+## 4 vấn đề đã khắc phục
+
+| # | Trước | Sau |
+|---|---|---|
+| 1 | `verify-email` thiếu `token` trả `00053` ("thiếu mã xác nhận") | `validate()` có thêm `missingByField`; thiếu `token` → `00055` |
+| 2 | Gửi lại mã cho tài khoản đã xác minh trả `00048` ("mã đã được gửi") dù không gửi email | Trả `00058` ("email đã xác minh") + `user`; không gửi email |
+| 3 | Không có rate limit cho đăng ký/đăng nhập/gửi mã/xác minh | `middlewares/rateLimit.middleware.js` (in-memory, theo IP), cấu hình `AUTH_RATE_LIMIT_WINDOW_MINUTES` / `AUTH_RATE_LIMIT_MAX`, vượt ngưỡng → 429 / `00024` + `Retry-After` |
+| 4 | Logout với access token hợp lệ của user đã bị xoá vẫn trả `00050` | Trả `00052` (`USER_NOT_FOUND`) khi `matchedCount = 0` |
+
+Ghi chú triển khai:
+
+- Rate limit là **in-memory**, phù hợp 1 instance backend. Nếu deploy nhiều instance cần chuyển sang Redis để dùng chung bộ đếm.
+- Cửa sổ/ngưỡng đọc lại mỗi request nên có thể chỉnh bằng env mà không cần sửa code; ngưỡng mặc định 20 request / 15 phút / IP.
+- Vì chung một bộ đếm cho 4 endpoint auth, một client spam login cũng sẽ tạm chặn đăng ký — đúng mục tiêu chống brute force nhưng nên cân nhắc tách ngưỡng riêng nếu cần.
+
+## Còn tồn tại (chưa khắc phục)
+
+- `.env` hiện không có `JWT_VERIFY_SECRET`, nên verification token dùng chung secret với access token (vẫn an toàn nhờ claim `typ`). Nên bổ sung secret riêng cho production.
+- Rate limit chưa có test cho trường hợp nhiều IP khác nhau (cần giả lập `X-Forwarded-For` + `trust proxy`).
 
 ## Vấn đề môi trường đã xử lý
 

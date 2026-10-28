@@ -76,7 +76,8 @@ const sendVerificationCode = async ({ email }) => {
   if (!user) throw fail(RC.EMAIL_ACCOUNT_NOT_FOUND); // 00036
 
   // Tài khoản đã xác minh rồi thì không gửi lại mã, tránh spam.
-  if (user.isVerified) return { alreadyVerified: true };
+  // Controller trả mã 00058 (email đã xác minh) thay vì 00048 ("đã gửi mã").
+  if (user.isVerified) return { alreadyVerified: true, user: toPublicUser(user) };
 
   const verification = await issueVerification(user);
   return { alreadyVerified: false, ...verification };
@@ -151,7 +152,11 @@ const refresh = async (refreshToken) => {
 };
 
 const logout = async (userId) => {
-  await User.updateOne({ _id: userId }, { $set: { refreshToken: null } });
+  // Token hợp lệ nhưng user đã bị xoá -> không được báo đăng xuất thành công.
+  if (!mongoose.isValidObjectId(userId)) throw fail(RC.USER_NOT_FOUND); // 00052
+
+  const result = await User.updateOne({ _id: userId }, { $set: { refreshToken: null } });
+  if (result.matchedCount === 0) throw fail(RC.USER_NOT_FOUND); // 00052
 };
 
 module.exports = { register, sendVerificationCode, verifyEmail, login, refresh, logout };

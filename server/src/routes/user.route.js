@@ -1,6 +1,7 @@
 const express = require('express');
 const auth = require('../middlewares/auth.middleware');
 const validate = require('../middlewares/validate.middleware');
+const { authRateLimiter } = require('../middlewares/rateLimit.middleware');
 const authController = require('../controllers/auth.controller');
 const {
   registerSchema,
@@ -16,6 +17,7 @@ const router = express.Router();
 // POST /user — đăng ký, gửi mã xác minh qua email (00035)
 router.post(
   '/',
+  authRateLimiter,
   validate(registerSchema, {
     byField: {
       email: RC.REGISTER_INVALID_EMAIL,       // 00026
@@ -30,6 +32,7 @@ router.post(
 // POST /user/send-verification-code — gửi lại mã xác minh (00048)
 router.post(
   '/send-verification-code',
+  authRateLimiter,
   validate(sendVerificationCodeSchema, {
     byField: { email: RC.REGISTER_INVALID_EMAIL }, // 00026
     fallback: RC.SEND_CODE_MISSING_FIELDS,         // 00005
@@ -40,9 +43,14 @@ router.post(
 // POST /user/verify-email — nhập mã 6 số + token xác minh (00058)
 router.post(
   '/verify-email',
+  authRateLimiter,
   validate(verifyEmailSchema, {
     byField: {
       code: RC.VERIFY_CODE_MISMATCH,     // 00054
+      token: RC.VERIFY_TOKEN_INVALID,    // 00055
+    },
+    missingByField: {
+      // Thiếu token là lỗi token, không phải "thiếu mã xác nhận" (00053).
       token: RC.VERIFY_TOKEN_INVALID,    // 00055
     },
     fallback: RC.VERIFY_CODE_MISSING,    // 00053
@@ -52,6 +60,7 @@ router.post(
 
 router.post(
   '/login',
+  authRateLimiter,
   validate(loginSchema, {
     byField: {
       email: RC.LOGIN_INVALID_EMAIL,     // 00039

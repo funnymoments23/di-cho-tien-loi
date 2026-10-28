@@ -195,9 +195,11 @@ describe(`POST ${BASE}/send-verification-code — gửi lại mã`, () => {
       .post(`${BASE}/send-verification-code`)
       .send({ email: payload.email });
 
+    // Không gửi email -> trả 00058 (email đã xác minh), không phải 00048 ("đã gửi mã").
     expect(res.status).toBe(200);
-    expect(res.body.code).toBe(RC.SEND_CODE_SUCCESS.code);
+    expect(res.body.code).toBe(RC.VERIFY_EMAIL_SUCCESS.code);
     expect(res.body.data.alreadyVerified).toBe(true);
+    expect(res.body.data.user.email).toBe(payload.email);
     expect(emailUtil.sendVerificationCode.mock.calls.length).toBe(callsBefore);
   });
 
@@ -241,13 +243,13 @@ describe(`POST ${BASE}/verify-email — xác minh email`, () => {
     expect(r.body.code).toBe(RC.VERIFY_CODE_MISMATCH.code);
   });
 
-  it('00053 khi thiếu token xác minh (fallback hiện tại)', async () => {
+  it('00055 khi thiếu token xác minh', async () => {
     const { payload } = await register();
     const r = await request(app)
       .post(`${BASE}/verify-email`)
       .send({ code: codeFor(payload.email) });
-    expect(r.status).toBe(400);
-    expect(r.body.code).toBe(RC.VERIFY_CODE_MISSING.code);
+    expect(r.status).toBe(401);
+    expect(r.body.code).toBe(RC.VERIFY_TOKEN_INVALID.code);
   });
 
   it('00055 khi token rác', async () => {
@@ -575,5 +577,16 @@ describe(`POST ${BASE}/logout — đăng xuất`, () => {
       .send({ refreshToken });
     expect(replay.status).toBe(401);
     expect(replay.body.code).toBe(RC.REFRESH_TOKEN_UNVERIFIABLE.code);
+  });
+
+  it('00052 khi token hợp lệ nhưng user đã bị xoá', async () => {
+    const { accessToken } = await getSession();
+    await User.deleteMany({});
+
+    const res = await request(app)
+      .post(`${BASE}/logout`)
+      .set('Authorization', `Bearer ${accessToken}`);
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe(RC.USER_NOT_FOUND.code);
   });
 });

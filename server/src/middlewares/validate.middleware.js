@@ -5,15 +5,17 @@ const { fail } = require('../utils/response');
  *
  * @param {import('joi').Schema} schema  schema Joi cho req.body
  * @param {object} options
- * @param {object} [options.byField]     map tên trường -> response code khi sai định dạng
- * @param {object} options.fallback       response code khi thiếu trường/không khớp map nào
+ * @param {object} [options.byField]        map tên trường -> response code khi SAI ĐỊNH DẠNG
+ * @param {object} [options.missingByField] map tên trường -> response code riêng khi THIẾU trường
+ * @param {object} [options.fallback]       response code mặc định (thiếu trường không có map riêng
+ *                                          hoặc lỗi không khớp trường nào)
  *
  * Ví dụ: validate(loginSchema, {
  *   byField: { email: RC.LOGIN_INVALID_EMAIL, password: RC.LOGIN_INVALID_PASSWORD },
  *   fallback: RC.LOGIN_MISSING_FIELDS,
  * })
  */
-const validate = (schema, { byField = {}, fallback } = {}) => {
+const validate = (schema, { byField = {}, missingByField = {}, fallback } = {}) => {
   if (!fallback) {
     throw new Error('validate() cần tham số fallback (mã lỗi mặc định).');
   }
@@ -31,9 +33,12 @@ const validate = (schema, { byField = {}, fallback } = {}) => {
 
     const detail = error.details[0];
     const field = detail.path?.[0];
-    // Thiếu hẳn trường -> "thiếu thông tin"; sai định dạng -> mã riêng của trường đó.
+    // Thiếu hẳn trường -> ưu tiên missingByField rồi mới tới fallback;
+    // sai định dạng -> ưu tiên mã riêng của trường đó rồi mới tới fallback.
     const isMissing = detail.type === 'any.required' || detail.type === 'string.empty';
-    const rc = (!isMissing && byField[field]) || fallback;
+    const rc = isMissing
+      ? missingByField[field] || fallback
+      : byField[field] || fallback;
 
     next(fail(rc));
   };

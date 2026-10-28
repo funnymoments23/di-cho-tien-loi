@@ -40,13 +40,14 @@ di-cho-tien-loi/
 - **Nhóm API Auth** (`routes/user.route.js`): 6 endpoint chạy được trên Postman.
   - `POST /it4788/user` — đăng ký, gửi mã 6 số qua email (`00035`).
   - `POST /it4788/user/verify-email` — nhập `{ code, token }` (`00058`).
-  - `POST /it4788/user/send-verification-code` — gửi lại mã (`00048`).
+  - `POST /it4788/user/send-verification-code` — gửi lại mã (`00048`; tài khoản đã xác minh trả `00058`).
   - `POST /it4788/user/login` — trả `user` + access token 1h + refresh token 7 ngày (`00047`).
   - `POST /it4788/user/refresh-token` — rotate refresh token (`00065`).
   - `POST /it4788/user/logout` — yêu cầu Bearer token, thu hồi refresh token (`00050`).
   - Nền tảng: `utils/jwt.js` (2 secret, `typ` chống dùng lẫn token, lưu refresh token dạng SHA-256), `middlewares/auth.middleware.js`, `middlewares/validate.middleware.js` (Joi → mã lỗi của đề), `utils/email.js` (Nodemailer; thiếu SMTP ở dev thì in mã ra console).
-- **Kiểm thử tự động nhóm API Auth**: 45 test (Jest + Supertest + MongoDB in-memory), chạy `npm test`,
-  hiện **45/45 pass** — xem [báo cáo kiểm thử](docs/test-report.md).
+  - Rate limit in-memory cho đăng ký / đăng nhập / gửi mã / xác minh email (`middlewares/rateLimit.middleware.js`), vượt ngưỡng trả `00024`.
+- **Kiểm thử tự động nhóm API Auth**: 49 test (Jest + Supertest + MongoDB in-memory), chạy `npm test`,
+  hiện **49/49 pass** — xem [báo cáo kiểm thử](docs/test-report.md).
 
 ### Chưa làm
 
@@ -67,7 +68,7 @@ npm run dev     # http://localhost:5000/it4788/health
 
 ```bash
 cd server
-npm test        # 45 test API Auth, dùng MongoDB in-memory, không cần .env
+npm test        # 49 test API Auth + rate limit, dùng MongoDB in-memory, không cần .env
 ```
 
 ## Tài liệu

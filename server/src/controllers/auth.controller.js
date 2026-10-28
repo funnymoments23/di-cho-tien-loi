@@ -14,7 +14,10 @@ const register = async (req, res, next) => {
 const sendVerificationCode = async (req, res, next) => {
   try {
     const data = await authService.sendVerificationCode(req.body);
-    sendSuccess(res, RC.SEND_CODE_SUCCESS, data); // 00048
+    // Đã xác minh trước đó: không có email nào được gửi, nên trả 00058
+    // ("email đã được xác minh") thay vì 00048 ("mã đã được gửi").
+    const rc = data.alreadyVerified ? RC.VERIFY_EMAIL_SUCCESS : RC.SEND_CODE_SUCCESS;
+    sendSuccess(res, rc, data);
   } catch (err) {
     next(err);
   }
