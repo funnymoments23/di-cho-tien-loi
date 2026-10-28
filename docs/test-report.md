@@ -1,10 +1,10 @@
-# Báo cáo kiểm thử — nhóm API Auth, Tài khoản, Nhóm, Danh mục & Đơn vị
+# Báo cáo kiểm thử — nhóm API Auth, Tài khoản, Nhóm, Danh mục, Đơn vị & Thực phẩm
 
-- **Ngày chạy:** 28/10/2026 (bổ sung nhóm API Danh mục và Đơn vị)
-- **Phạm vi:** 6 endpoint Auth + 5 endpoint Tài khoản + 6 endpoint Nhóm + 4 endpoint Danh mục + 4 endpoint Đơn vị (`server/src/routes/user.route.js`, `group.route.js`, `admin.route.js`) + endpoint health + rate limit
+- **Ngày chạy:** 28/10/2026 (bổ sung nhóm API Thực phẩm)
+- **Phạm vi:** 6 endpoint Auth + 5 endpoint Tài khoản + 6 endpoint Nhóm + 4 endpoint Danh mục + 4 endpoint Đơn vị + 5 endpoint Thực phẩm (`server/src/routes/user.route.js`, `group.route.js`, `admin.route.js`, `food.route.js`) + endpoint health + rate limit
 - **Công cụ:** Jest 30.5.2, Supertest 7.3.1, mongodb-memory-server 11.3.0
 - **Môi trường:** Windows, Node.js v24.11.0, MongoDB in-memory 8.2.6
-- **Kết quả:** **152/152 test PASS**, 6 test suite, ~6,4 giây (sau khi binary Mongo đã tải sẵn)
+- **Kết quả:** **199/199 test PASS**, 7 test suite, ~13,5 giây (sau khi binary Mongo đã tải sẵn)
 
 ## Cách chạy
 
@@ -20,7 +20,8 @@ Cấu hình: [`server/jest.config.js`](../server/jest.config.js), biến môi tr
 [`server/tests/user.test.js`](../server/tests/user.test.js),
 [`server/tests/group.test.js`](../server/tests/group.test.js),
 [`server/tests/category.test.js`](../server/tests/category.test.js),
-[`server/tests/unit.test.js`](../server/tests/unit.test.js) và
+[`server/tests/unit.test.js`](../server/tests/unit.test.js),
+[`server/tests/food.test.js`](../server/tests/food.test.js) và
 [`server/tests/rate-limit.test.js`](../server/tests/rate-limit.test.js).
 
 Đặc điểm bộ test:
@@ -28,7 +29,7 @@ Cấu hình: [`server/jest.config.js`](../server/jest.config.js), biến môi tr
 - Dùng **MongoDB in-memory** nên không chạm vào DB thật, không cần `.env`, chạy được trên CI.
 - **Mock `utils/email.js`** — không gửi email thật; mã 6 số lấy từ `mock.calls` để test luồng verify.
 - `BCRYPT_ROUNDS=4` cho nhanh; JWT secret cố định trong `setup-env.js`.
-- `User.deleteMany({})` + `Group.deleteMany({})` + `Category.deleteMany({})` + `Unit.deleteMany({})` trước mỗi test → các test độc lập, không phụ thuộc thứ tự.
+- `User.deleteMany({})` + `Group.deleteMany({})` + `Category.deleteMany({})` + `Unit.deleteMany({})` + `Food.deleteMany({})` trước mỗi test → các test độc lập, không phụ thuộc thứ tự.
 - Rate limit tắt mặc định trong bộ test chức năng (`AUTH_RATE_LIMIT_MAX=0`), có test riêng với ngưỡng thấp.
 
 ## Kết quả theo endpoint
@@ -363,7 +364,89 @@ Ghi chú nhóm Đơn vị:
 - Cùng mô hình quyền với Danh mục: đọc mở cho tài khoản đã đăng nhập, ghi chỉ dành cho `admin`.
 - Đặc tả không có mã riêng cho "tên mới đã tồn tại" khi sửa đơn vị; nhóm dùng `00113` ("Đã tồn tại đơn vị có tên này") và khai báo thành hằng `UNIT_UPDATE_NEW_NAME_EXISTS`.
 - Việc tạo/sửa bắt lỗi trùng khoá `11000` của MongoDB để hai request đồng thời vẫn trả đúng `00113`/`00132` thay vì lỗi máy chủ.
-- Khi model `Food` được xây dựng, cần chặn hoặc xử lý việc xoá category/unit đang được thực phẩm tham chiếu (hiện chưa có ràng buộc vì `foods` chưa tồn tại).
+- Model `Food` đã có (`name`, `categoryId`, `unitId`, `image`, `groupId`, `createdBy`) với unique index `{ groupId, name }`. Tuy nhiên `DELETE /admin/category` và `DELETE /admin/unit` **chưa chặn** xoá danh mục/đơn vị đang được thực phẩm tham chiếu — xem mục "Còn tồn tại".
+
+### Nhóm API Thực phẩm (`tests/food.test.js`) — 47/47
+
+#### `GET /it4788/food` — danh sách thực phẩm của nhóm (5/5)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 153 | Không có token | 401 / `00006` | PASS |
+| 154 | Người dùng chưa vào nhóm | 403 / `00185` | PASS |
+| 155 | Nhóm chưa có thực phẩm | 200 / `00188`, `data = []` | PASS |
+| 156 | Có dữ liệu | 200 / `00188`; kèm `categoryName`/`unitName`, sắp xếp theo tên | PASS |
+| 157 | Hai nhóm khác nhau | Chỉ trả thực phẩm của nhóm mình | PASS |
+
+#### `GET /it4788/food/search` — tìm kiếm (6/6)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 158 | Không có token | 401 / `00006` | PASS |
+| 159 | Người dùng chưa vào nhóm | 403 / `00185` | PASS |
+| 160 | `keyword` khác hoa/thường | 200 / `00188`; lọc đúng tên | PASS |
+| 161 | Lọc theo `categoryName` | 200 / `00188`; chỉ trả món của danh mục | PASS |
+| 162 | Danh mục không tồn tại | 200 / `00188`, `data = []` | PASS |
+| 163 | `keyword` chứa ký tự regex (`.*[(`) | 200 / `00188`; không lỗi truy vấn, `data = []` | PASS |
+
+#### `POST /it4788/food` — tạo thực phẩm (14/14)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 164 | Không có token | 401 / `00006` | PASS |
+| 165 | Body rỗng | 400 / `00147` | PASS |
+| 166 | `foodName` rỗng | 400 / `00147` | PASS |
+| 167 | `foodName` quá 100 ký tự | 400 / `00148` | PASS |
+| 168 | Thiếu `categoryName` | 400 / `00149` | PASS |
+| 169 | Thiếu `unitName` | 400 / `00150` | PASS |
+| 170 | Người dùng chưa vào nhóm | 403 / `00156` | PASS |
+| 171 | Đơn vị không tồn tại | 404 / `00153` | PASS |
+| 172 | Danh mục không tồn tại | 404 / `00155` | PASS |
+| 173 | Trùng tên trong nhóm (kể cả sau trim) | 409 / `00151`; DB không thêm bản ghi | PASS |
+| 174 | Hợp lệ | 201 / `00160`; trim tên, gắn `groupId` + `createdBy` | PASS |
+| 175 | Hai nhóm cùng tên thực phẩm | 201 / `00160`; cho phép | PASS |
+| 176 | `multipart/form-data` với `image` | 201 / `00160`; ảnh lưu vào `uploads/foods/` | PASS |
+| 177 | Tệp tải lên không phải ảnh | 400 / `00158` | PASS |
+
+#### `PUT /it4788/food` — sửa thực phẩm (16/16)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 178 | Không có token | 401 / `00006` | PASS |
+| 179 | Thiếu `foodName` | 400 / `00161` | PASS |
+| 180 | `foodName` rỗng | 400 / `00161` | PASS |
+| 181 | `foodName` quá 100 ký tự | 400 / `00162` | PASS |
+| 182 | Không có trường cập nhật | 400 / `00163` | PASS |
+| 183 | `newName` rỗng | 400 / `00166` | PASS |
+| 184 | `newCategory` rỗng | 400 / `00164` | PASS |
+| 185 | `newUnit` rỗng | 400 / `00165` | PASS |
+| 186 | Thực phẩm không tồn tại | 404 / `00167` | PASS |
+| 187 | Không phải người tạo/trưởng nhóm | 403 / `00167` | PASS |
+| 188 | Đơn vị mới không tồn tại | 404 / `00169` | PASS |
+| 189 | Danh mục mới không tồn tại | 404 / `00171` | PASS |
+| 190 | Tên mới đã tồn tại | 409 / `00173`; bản ghi cũ giữ nguyên tên | PASS |
+| 191 | Người tạo sửa tên + danh mục + đơn vị | 200 / `00178` | PASS |
+| 192 | Trưởng nhóm sửa món của thành viên | 200 / `00178` | PASS |
+| 193 | Chỉ cập nhật ảnh | 200 / `00178`; ảnh lưu vào `uploads/foods/` | PASS |
+
+#### `DELETE /it4788/food` — xoá thực phẩm (6/6)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 194 | Không có token | 401 / `00006` | PASS |
+| 195 | Thiếu `foodName` | 400 / `00179` | PASS |
+| 196 | Thực phẩm không tồn tại | 404 / `00180` | PASS |
+| 197 | Không phải người tạo/trưởng nhóm | 403 / `00181`; DB giữ nguyên bản ghi | PASS |
+| 198 | Người tạo xoá món của mình | 200 / `00184`; DB không còn bản ghi | PASS |
+| 199 | Trưởng nhóm xoá món của thành viên | 200 / `00184`; DB không còn bản ghi | PASS |
+
+Ghi chú nhóm Thực phẩm:
+
+- Tên thực phẩm unique **trong phạm vi nhóm** (`{ groupId, name }`), hai nhóm khác nhau dùng cùng tên bình thường; bắt lỗi `11000` để hai request đồng thời vẫn trả `00151`/`00173`.
+- Quyền: mọi thành viên được tạo; **người tạo hoặc trưởng nhóm** được sửa/xoá (`00167`/`00181` cho người khác). Đây là quy ước của nhóm vì đặc tả gốc chỉ có mã lỗi mà không nói rõ ai được sửa/xoá.
+- Chuỗi rỗng sau trim được xử lý là **thiếu trường** (`00147`/`00161`) để đồng nhất với Danh mục/Đơn vị; mã "tên không hợp lệ" (`00148`/`00162`) dùng cho tên quá dài.
+- Ảnh thực phẩm lưu ở `server/uploads/foods/` và phục vụ qua `/it4788/uploads/foods/...`; `uploadFoodImage` ghi đường dẫn vào `req.body.image` trước bước validate nên request chỉ có ảnh vẫn cập nhật được.
+- `GET /food/search` hiện hỗ trợ `keyword` và `categoryName`; tham số `inFridge` trong [tài liệu 02](02-GOP-Y-DAC-TA-API.md) mục 3.1 sẽ bổ sung khi có model `FridgeItem`.
 
 ## 4 vấn đề đã khắc phục
 
@@ -384,6 +467,8 @@ Ghi chú triển khai:
 
 - `.env` hiện không có `JWT_VERIFY_SECRET`, nên verification token dùng chung secret với access token (vẫn an toàn nhờ claim `typ`). Nên bổ sung secret riêng cho production.
 - Rate limit chưa có test cho trường hợp nhiều IP khác nhau (cần giả lập `X-Forwarded-For` + `trust proxy`).
+- `DELETE /admin/category` và `DELETE /admin/unit` chưa kiểm tra thực phẩm đang tham chiếu: xoá danh mục/đơn vị sẽ để lại `Food` trỏ tới id không còn tồn tại. Cần chặn (trả mã phù hợp) hoặc chuyển thực phẩm sang danh mục/đơn vị mặc định.
+- `GET /food/search` chưa lọc được `inFridge` vì nhóm API Tủ lạnh (model `FridgeItem`) chưa được xây dựng.
 
 ## Vấn đề môi trường đã xử lý
 

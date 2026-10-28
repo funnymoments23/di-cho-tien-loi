@@ -36,4 +36,66 @@ const toPublicLookup = (item) => ({
   name: item.name,
 });
 
-module.exports = { toPublicUser, toPublicGroup, toPublicLookup };
+/**
+ * Chuyển document Food thành object trả cho client.
+ * `categoryId` / `unitId` cần được populate (chỉ lấy `name`) trước khi gọi;
+ * nếu chưa populate thì hai trường tên sẽ là null thay vì lộ ObjectId thô.
+ */
+const toPublicFood = (food) => {
+  const category = food.categoryId;
+  const unit = food.unitId;
+
+  return {
+    id: food._id,
+    name: food.name,
+    image: food.image ?? null,
+    categoryId: category?._id ?? null,
+    categoryName: category?.name ?? null,
+    unitId: unit?._id ?? null,
+    unitName: unit?.name ?? null,
+    groupId: food.groupId,
+    createdBy: food.createdBy ?? null,
+    createdAt: food.createdAt,
+    updatedAt: food.updatedAt,
+  };
+};
+
+/**
+ * Chuyển document FridgeItem thành object trả cho client.
+ * `foodId` cần được populate (kèm `categoryId` / `unitId` chỉ lấy `name`)
+ * trước khi gọi. Trường lưu là `expiryDate` nhưng API trả `useWithin`
+ * theo đặc tả (xem docs/02 mục 4.2).
+ */
+const toPublicFridgeItem = (item) => {
+  const food = item.foodId;
+  const isPopulated = Boolean(food && typeof food === 'object' && food.name !== undefined);
+  const category = isPopulated ? food.categoryId : null;
+  const unit = isPopulated ? food.unitId : null;
+
+  return {
+    id: item._id,
+    foodId: isPopulated ? food._id : food,
+    foodName: isPopulated ? food.name : null,
+    image: isPopulated ? food.image ?? null : null,
+    categoryId: category?._id ?? null,
+    categoryName: category?.name ?? null,
+    unitId: unit?._id ?? null,
+    unitName: unit?.name ?? null,
+    quantity: item.quantity,
+    useWithin: item.expiryDate,
+    location: item.location ?? null,
+    note: item.note ?? null,
+    isNotified: item.isNotified,
+    groupId: item.groupId,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+  };
+};
+
+module.exports = {
+  toPublicUser,
+  toPublicGroup,
+  toPublicLookup,
+  toPublicFood,
+  toPublicFridgeItem,
+};

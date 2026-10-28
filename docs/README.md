@@ -72,13 +72,21 @@ di-cho-tien-loi/
   - `PUT /admin/unit` — đổi tên với body `{ name, newName }` (`00122`; thiếu trường `00117`, trùng tên cũ `00118`, không tìm thấy `00119`, tên mới đã tồn tại `00113`).
   - `DELETE /admin/unit` — xoá theo body `{ name }` (`00128`; thiếu tên `00123`, không tìm thấy `00125`).
   - Nền tảng: model `Category`/`Unit` (tên unique, trim, tối đa 50 ký tự), middleware `admin.middleware.js` (role `admin`, từ chối `00017`), serializer `toPublicLookup`.
-- **Kiểm thử tự động**: 152 test (Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + rate limit), hiện **152/152 pass** — xem [báo cáo kiểm thử](test-report.md).
+- **Nhóm API Thực phẩm** (`routes/food.route.js`, 5 endpoint) — danh mục thực phẩm riêng của từng nhóm, tên duy nhất trong phạm vi nhóm.
+  - `GET /food` — danh sách thực phẩm của nhóm, kèm `categoryName`/`unitName` (`00188`; chưa vào nhóm `00185`).
+  - `GET /food/search` — tìm theo `keyword` (không phân biệt hoa/thường) và/hoặc `categoryName` (`00188`).
+  - `POST /food` — tạo với body `{ foodName, categoryName, unitName }`, nhận JSON hoặc `multipart/form-data` với ảnh ở field `image` (`00160`; thiếu trường `00147`, tên không hợp lệ `00148`, thiếu danh mục `00149`, thiếu đơn vị `00150`, trùng tên `00151`, đơn vị không tồn tại `00153`, danh mục không tồn tại `00155`, chưa vào nhóm `00156`, ảnh lỗi `00158`).
+  - `PUT /food` — sửa bằng `{ foodName, newName?, newCategory?, newUnit?, image? }` (`00178`; thiếu `foodName` `00161`, tên không hợp lệ `00162`, không có trường cập nhật `00163`, danh mục/đơn vị/tên mới không hợp lệ `00164`–`00166`, không tìm thấy hoặc không có quyền `00167`, đơn vị mới không tồn tại `00169`, danh mục mới không tồn tại `00171`, tên mới trùng `00173`).
+  - `DELETE /food` — xoá theo body `{ foodName }` (`00184`; thiếu tên `00179`, không tìm thấy `00180`, không có quyền `00181`).
+  - Quyền: mọi thành viên được tạo; chỉ người tạo hoặc trưởng nhóm được sửa/xoá. Ảnh lưu ở `server/uploads/foods/`, phục vụ qua `/it4788/uploads/foods/`.
+- **Kiểm thử tự động**: 199 test (Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + rate limit), hiện **199/199 pass** — xem [báo cáo kiểm thử](test-report.md).
 
 ### Chưa làm
 
-- Các model còn lại (Food, ShoppingList, Recipe, MealPlan...), routes/controllers cho các nhóm API còn lại (Thực phẩm, Tủ lạnh, Đi chợ, Bữa ăn, Công thức).
+- Các model còn lại (ShoppingList, Recipe, MealPlan, FridgeItem...), routes/controllers cho các nhóm API còn lại (Tủ lạnh, Đi chợ, Bữa ăn, Công thức).
+- Bộ lọc `inFridge` của `GET /food/search` chờ nhóm API Tủ lạnh (cần model `FridgeItem`).
 - API quên mật khẩu và các API bổ sung khác.
-- Upload ảnh đại diện hiện lưu trên đĩa server (`server/uploads/`, đã gitignore); khi deploy cần chuyển sang Cloudinary để không mất ảnh.
+- Upload ảnh (đại diện, thực phẩm) hiện lưu trên đĩa server (`server/uploads/`, đã gitignore); khi deploy cần chuyển sang Cloudinary để không mất ảnh.
 - Ứng dụng mobile và trang admin.
 
 ### Chạy server
@@ -94,7 +102,7 @@ npm run dev     # http://localhost:5000/it4788/health
 
 ```bash
 cd server
-npm test        # 152 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + rate limit, dùng MongoDB in-memory, không cần .env
+npm test        # 199 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + rate limit, dùng MongoDB in-memory, không cần .env
 ```
 
 ## Tài liệu
@@ -103,7 +111,7 @@ npm test        # 152 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn 
 |---|---|
 | [01 – Kế hoạch & Kiến trúc](01-KE-HOACH-KIEN-TRUC.md) | Kiến trúc hệ thống, thiết kế database, cấu trúc thư mục, danh sách màn hình, lộ trình 8 tuần, phân công |
 | [02 – Rà soát đặc tả API](02-GOP-Y-DAC-TA-API.md) | 16 lỗi phát hiện trong mô tả API của đề và đề xuất sửa đổi (phần tính điểm cộng) |
-| [Báo cáo kiểm thử](test-report.md) | 152 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn vị: ma trận case, kết quả, phát hiện và cách chạy |
+| [Báo cáo kiểm thử](test-report.md) | 199 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm: ma trận case, kết quả, phát hiện và cách chạy |
 
 ## Bắt đầu
 
