@@ -1,10 +1,10 @@
-# Báo cáo kiểm thử — nhóm API Auth, Tài khoản, Nhóm, Danh mục, Đơn vị, Thực phẩm & Tủ lạnh
+# Báo cáo kiểm thử — nhóm API Auth, Tài khoản, Nhóm, Danh mục, Đơn vị, Thực phẩm, Tủ lạnh & Đi chợ
 
-- **Ngày chạy:** 28/10/2026 (bổ sung nhóm API Tủ lạnh)
-- **Phạm vi:** 6 endpoint Auth + 5 endpoint Tài khoản + 6 endpoint Nhóm + 4 endpoint Danh mục + 4 endpoint Đơn vị + 5 endpoint Thực phẩm + 5 endpoint Tủ lạnh (`server/src/routes/user.route.js`, `group.route.js`, `admin.route.js`, `food.route.js`, `fridge.route.js`) + endpoint health + rate limit
+- **Ngày chạy:** 29/10/2026 (bổ sung nhóm API Đi chợ)
+- **Phạm vi:** 6 endpoint Auth + 5 endpoint Tài khoản + 6 endpoint Nhóm + 4 endpoint Danh mục + 4 endpoint Đơn vị + 5 endpoint Thực phẩm + 5 endpoint Tủ lạnh + 8 endpoint Đi chợ (`server/src/routes/user.route.js`, `group.route.js`, `admin.route.js`, `food.route.js`, `fridge.route.js`, `shopping.route.js`) + endpoint health + rate limit
 - **Công cụ:** Jest 30.5.2, Supertest 7.3.1, mongodb-memory-server 11.3.0
 - **Môi trường:** Windows, Node.js v24.11.0, MongoDB in-memory 8.2.6
-- **Kết quả:** **252/252 test PASS**, 8 test suite, ~19 giây (sau khi binary Mongo đã tải sẵn)
+- **Kết quả:** **333/333 test PASS**, 9 test suite, ~28 giây (sau khi binary Mongo đã tải sẵn)
 
 ## Cách chạy
 
@@ -22,7 +22,8 @@ Cấu hình: [`server/jest.config.js`](../server/jest.config.js), biến môi tr
 [`server/tests/category.test.js`](../server/tests/category.test.js),
 [`server/tests/unit.test.js`](../server/tests/unit.test.js),
 [`server/tests/food.test.js`](../server/tests/food.test.js),
-[`server/tests/fridge.test.js`](../server/tests/fridge.test.js) và
+[`server/tests/fridge.test.js`](../server/tests/fridge.test.js),
+[`server/tests/shopping.test.js`](../server/tests/shopping.test.js) và
 [`server/tests/rate-limit.test.js`](../server/tests/rate-limit.test.js).
 
 Đặc điểm bộ test:
@@ -30,7 +31,7 @@ Cấu hình: [`server/jest.config.js`](../server/jest.config.js), biến môi tr
 - Dùng **MongoDB in-memory** nên không chạm vào DB thật, không cần `.env`, chạy được trên CI.
 - **Mock `utils/email.js`** — không gửi email thật; mã 6 số lấy từ `mock.calls` để test luồng verify.
 - `BCRYPT_ROUNDS=4` cho nhanh; JWT secret cố định trong `setup-env.js`.
-- `User.deleteMany({})` + `Group.deleteMany({})` + `Category.deleteMany({})` + `Unit.deleteMany({})` + `Food.deleteMany({})` + `FridgeItem.deleteMany({})` trước mỗi test → các test độc lập, không phụ thuộc thứ tự.
+- `User.deleteMany({})` + `Group.deleteMany({})` + `Category.deleteMany({})` + `Unit.deleteMany({})` + `Food.deleteMany({})` + `FridgeItem.deleteMany({})` + `ShoppingList.deleteMany({})` + `Task.deleteMany({})` trước mỗi test → các test độc lập, không phụ thuộc thứ tự.
 - Rate limit tắt mặc định trong bộ test chức năng (`AUTH_RATE_LIMIT_MAX=0`), có test riêng với ngưỡng thấp.
 
 ## Kết quả theo endpoint
@@ -547,6 +548,144 @@ Ghi chú nhóm Tủ lạnh:
 - Quyền: mọi thành viên trong nhóm được thêm/sửa/xoá mục tủ. Thực phẩm hoặc mục tủ thuộc nhóm khác bị từ chối bằng `00198`/`00212`/`00219`/`00232`.
 - Đổi `useWithin` đặt lại `isNotified = false` để cron job nhắc hết hạn gửi lại theo hạn mới (docs/01 mục 6.3).
 - `DELETE /food` xoá kèm các mục tủ lạnh tham chiếu để không còn bản ghi mồ côi; `GET /food/search` dùng `FridgeItem.distinct('foodId')` cho bộ lọc `inFridge`.
+
+### Nhóm API Đi chợ (`tests/shopping.test.js`) — 81/81
+
+#### `POST /it4788/shopping` — tạo danh sách đi chợ (13/13)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 253 | Không có token | 401 / `00006` | PASS |
+| 254 | Thiếu `name` | 400 / `00239` | PASS |
+| 255 | Thiếu `assignToUsername` | 400 / `00240` | PASS |
+| 256 | `note` quá 500 ký tự | 400 / `00241` | PASS |
+| 257 | `date` không hợp lệ | 400 / `00242` | PASS |
+| 258 | Người dùng chưa vào nhóm | 403 / `00243` | PASS |
+| 259 | Thành viên không phải trưởng nhóm | 403 / `00243` | PASS |
+| 260 | Username được giao không tồn tại | 404 / `00245` | PASS |
+| 261 | Người được giao thuộc nhóm khác | 403 / `00246` | PASS |
+| 262 | Hợp lệ | 201 / `00249`; lưu `name`, `assignedTo`, `note`, `date`, `createdBy`, `groupId` | PASS |
+| 263 | Tên / ghi chú có khoảng trắng | 201 / `00249`; được trim | PASS |
+| 264 | Bỏ trống `note` / `date` | 201 / `00249`; hai trường thành `null` | PASS |
+| 265 | Hai nhóm khác nhau tạo danh sách riêng | 201 / `00249`; cho phép | PASS |
+
+#### `PUT /it4788/shopping` — sửa danh sách (15/15)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 266 | Không có token | 401 / `00006` | PASS |
+| 267 | Thiếu `listId` | 400 / `00251` | PASS |
+| 268 | Không có trường cập nhật | 400 / `00252` | PASS |
+| 269 | `newName` rỗng | 400 / `00253` | PASS |
+| 270 | `newAssignToUsername` rỗng | 400 / `00254` | PASS |
+| 271 | `newNote` quá 500 ký tự | 400 / `00255` | PASS |
+| 272 | `newDate` không hợp lệ | 400 / `00256` | PASS |
+| 273 | Thành viên không phải trưởng nhóm | 403 / `00258` | PASS |
+| 274 | Người dùng chưa vào nhóm | 403 / `00258` | PASS |
+| 275 | Danh sách không tồn tại | 404 / `00260` | PASS |
+| 276 | Danh sách thuộc nhóm khác | 403 / `00261` | PASS |
+| 277 | Người được giao mới không tồn tại | 404 / `00262` | PASS |
+| 278 | Giao cho người thuộc nhóm khác | 403 / `00263` | PASS |
+| 279 | Sửa tên + người được giao + ghi chú + ngày | 200 / `00266` | PASS |
+| 280 | Xoá ghi chú / bỏ ngày bằng `''` và `null` | 200 / `00266`; hai trường thành `null` | PASS |
+
+#### `DELETE /it4788/shopping` — xoá danh sách (7/7)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 281 | Không có token | 401 / `00006` | PASS |
+| 282 | Thiếu `listId` | 400 / `00268` | PASS |
+| 283 | Thành viên không phải trưởng nhóm | 403 / `00270` | PASS |
+| 284 | Người dùng chưa vào nhóm | 403 / `00270` | PASS |
+| 285 | Danh sách không tồn tại | 404 / `00272` | PASS |
+| 286 | Danh sách thuộc nhóm khác | 403 / `00273` | PASS |
+| 287 | Xoá thành công | 200 / `00275`; xoá luôn các món bên trong | PASS |
+
+#### `POST /it4788/shopping/task` — thêm món (13/13)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 288 | Không có token | 401 / `00006` | PASS |
+| 289 | Thiếu `listId` | 400 / `00277` | PASS |
+| 290 | Thiếu mảng `tasks` | 400 / `00278` | PASS |
+| 291 | Mảng `tasks` rỗng | 400 / `00279` | PASS |
+| 292 | Một món thiếu `foodName` | 400 / `00279` | PASS |
+| 293 | `quantity` = 0 | 400 / `00279` | PASS |
+| 294 | Thành viên không phải trưởng nhóm | 403 / `00281` | PASS |
+| 295 | Danh sách không tồn tại | 404 / `00283` | PASS |
+| 296 | Danh sách thuộc nhóm khác | 403 / `00284` | PASS |
+| 297 | Thực phẩm không tồn tại trong nhóm | 404 / `00285` | PASS |
+| 298 | Cùng thực phẩm lặp trong mảng gửi lên | 409 / `00285x`; DB không thêm bản ghi | PASS |
+| 299 | Thực phẩm đã có trong danh sách | 409 / `00285x`; DB giữ 1 bản ghi | PASS |
+| 300 | Thêm nhiều món hợp lệ | 201 / `00287`; kèm `foodName`, `unitName`, `isCompleted=false` | PASS |
+
+#### `GET /it4788/shopping/task` — danh sách kèm món (6/6)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 301 | Không có token | 401 / `00006` | PASS |
+| 302 | Người dùng chưa vào nhóm | 403 / `00288` | PASS |
+| 303 | Nhóm chưa có danh sách | 200 / `00292`, `data = []` | PASS |
+| 304 | Có dữ liệu | 200 / `00292`; sắp xếp theo ngày, kèm `tasks`, `taskCount`, `completedCount` | PASS |
+| 305 | Hai nhóm khác nhau | Chỉ trả danh sách của nhóm mình | PASS |
+| 306 | `GET /it4788/shopping` (API bổ sung) | 200 / `00292`; cùng dữ liệu với `/shopping/task` | PASS |
+
+#### `DELETE /it4788/shopping/task` — xoá món (6/6)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 307 | Không có token | 401 / `00006` | PASS |
+| 308 | Thiếu `taskId` | 400 / `00294` | PASS |
+| 309 | Thành viên không phải trưởng nhóm | 403 / `00297` | PASS |
+| 310 | Nhiệm vụ không tồn tại | 404 / `00296` | PASS |
+| 311 | Nhiệm vụ thuộc nhóm khác | 404 / `00296` | PASS |
+| 312 | Xoá thành công | 200 / `00299`; DB không còn bản ghi | PASS |
+
+#### `PUT /it4788/shopping/task` — sửa món (11/11)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 313 | Không có token | 401 / `00006` | PASS |
+| 314 | Thiếu `taskId` | 400 / `00301` | PASS |
+| 315 | Không có trường cập nhật | 400 / `00302` | PASS |
+| 316 | `newFoodName` rỗng | 400 / `00303` | PASS |
+| 317 | `newQuantity` âm | 400 / `00304` | PASS |
+| 318 | Thành viên không phải trưởng nhóm | 403 / `00307` | PASS |
+| 319 | Nhiệm vụ không tồn tại | 404 / `00306` | PASS |
+| 320 | Tên thực phẩm mới không tồn tại | 404 / `00308` | PASS |
+| 321 | Thực phẩm mới đã có trong cùng danh sách | 409 / `00309` | PASS |
+| 322 | Sửa tên + số lượng | 200 / `00312`; trả kèm đơn vị mới | PASS |
+| 323 | Chỉ sửa số lượng | 200 / `00312`; tên giữ nguyên | PASS |
+
+#### `PATCH /it4788/shopping/task/:taskId/complete` — đánh dấu đã mua (8/8)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 324 | Không có token | 401 / `00006` | PASS |
+| 325 | Thiếu `isCompleted` | 400 / `00300` | PASS |
+| 326 | `isCompleted` không phải boolean | 400 / `00300` | PASS |
+| 327 | Người dùng chưa vào nhóm | 403 / `00288` | PASS |
+| 328 | Nhiệm vụ không tồn tại | 404 / `00306` | PASS |
+| 329 | Thành viên (không phải trưởng nhóm) tick đã mua | 200 / `00312`; `isCompleted=true` | PASS |
+| 330 | Bỏ tick để mua lại | 200 / `00312`; `isCompleted=false` | PASS |
+| 331 | `completedCount` sau khi tick | 200 / `00292`; `taskCount=1`, `completedCount=1` | PASS |
+
+#### Dọn dữ liệu liên quan (2/2)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 332 | Xoá thực phẩm đang có trong danh sách | 200 / `00184`; món tham chiếu trong danh sách cũng bị xoá | PASS |
+| 333 | Người cuối cùng rời nhóm | 200 / `00108`; danh sách đi chợ và món của nhóm bị xoá | PASS |
+
+Ghi chú nhóm Đi chợ:
+
+- Đặc tả gốc (file PDF mô tả API IT4788, thư mục `BTL/` ngoài repo) dùng body cho cả `DELETE`; nhóm giữ đúng đặc tả (body `{ listId }` / `{ taskId }`) và ghi góp ý ở [tài liệu 02](02-GOP-Y-DAC-TA-API.md) mục 2.6.
+- Quyền: **trưởng nhóm** tạo/sửa/xoá danh sách và món; mọi thành viên xem danh sách của nhóm. API bổ sung `PATCH .../complete` cho phép mọi thành viên tick đã mua vì người đi chợ thường không phải trưởng nhóm.
+- `date` / `note` không bắt buộc khi tạo: bảng mã chỉ có mã "thiếu tên" (`00239`) và "thiếu `assignToUsername`" (`00240`); mã `00242`/`00241` dùng khi hai trường này sai định dạng. `date = null` nghĩa là danh sách chưa chốt ngày.
+- Ràng buộc `{ listId, foodId }` unique bảo đảm một món chỉ xuất hiện một lần trong danh sách (`00285x`/`00309`); bắt cả trường hợp trùng ngay trong mảng gửi lên.
+- Xoá danh sách xoá luôn `Task` bên trong; `GET /shopping/task` gom nhiệm vụ theo danh sách và trả `taskCount` / `completedCount` để app hiển thị tiến độ.
+- `PUT /shopping/task` nhận thêm `newQuantity` theo đề xuất [tài liệu 02](02-GOP-Y-DAC-TA-API.md) mục 1.4 (đặc tả gốc bỏ sót trường này).
+- `middlewares/validate.middleware.js` được chỉnh để lỗi thiếu trường **bên trong mảng** (`tasks[0].foodName`) trả `00279` (mảng sai) thay vì `00278` (thiếu mảng).
 
 ## 4 vấn đề đã khắc phục
 

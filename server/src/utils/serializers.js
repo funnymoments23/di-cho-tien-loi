@@ -92,10 +92,75 @@ const toPublicFridgeItem = (item) => {
   };
 };
 
+/**
+ * Chuyển document Task (món cần mua) thành object trả cho client.
+ * `foodId` cần được populate (kèm `unitId` chỉ lấy `name`) trước khi gọi.
+ */
+const toPublicTask = (task) => {
+  const food = task.foodId;
+  const isPopulated = Boolean(food && typeof food === 'object' && food.name !== undefined);
+  const unit = isPopulated ? food.unitId : null;
+
+  return {
+    id: task._id,
+    listId: task.listId,
+    foodId: isPopulated ? food._id : food,
+    foodName: isPopulated ? food.name : null,
+    image: isPopulated ? food.image ?? null : null,
+    unitId: unit?._id ?? null,
+    unitName: unit?.name ?? null,
+    quantity: task.quantity,
+    isCompleted: task.isCompleted,
+    createdAt: task.createdAt,
+    updatedAt: task.updatedAt,
+  };
+};
+
+/**
+ * Chuyển document ShoppingList thành object trả cho client.
+ * `assignedTo` / `createdBy` cần được populate (`name`, `username`) trước khi gọi.
+ * `tasks` chỉ truyền vào ở GET /shopping/task; khi đó trả kèm số món và số món đã mua.
+ */
+const toPublicShoppingList = (list, tasks) => {
+  const assignee = list.assignedTo;
+  const isAssigneePopulated = Boolean(
+    assignee && typeof assignee === 'object' && assignee.name !== undefined
+  );
+  const creator = list.createdBy;
+  const isCreatorPopulated = Boolean(
+    creator && typeof creator === 'object' && creator.name !== undefined
+  );
+
+  const data = {
+    id: list._id,
+    name: list.name,
+    groupId: list.groupId,
+    assignedTo: isAssigneePopulated ? assignee._id : assignee,
+    assignedToUsername: isAssigneePopulated ? assignee.username ?? null : null,
+    assignedToName: isAssigneePopulated ? assignee.name ?? null : null,
+    note: list.note ?? null,
+    date: list.date ?? null,
+    createdBy: isCreatorPopulated ? creator._id : creator ?? null,
+    createdByName: isCreatorPopulated ? creator.name ?? null : null,
+    createdAt: list.createdAt,
+    updatedAt: list.updatedAt,
+  };
+
+  if (Array.isArray(tasks)) {
+    data.tasks = tasks.map(toPublicTask);
+    data.taskCount = tasks.length;
+    data.completedCount = tasks.filter((task) => task.isCompleted).length;
+  }
+
+  return data;
+};
+
 module.exports = {
   toPublicUser,
   toPublicGroup,
   toPublicLookup,
   toPublicFood,
   toPublicFridgeItem,
+  toPublicTask,
+  toPublicShoppingList,
 };

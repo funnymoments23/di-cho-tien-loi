@@ -35,7 +35,11 @@ const validate = (schema, { byField = {}, missingByField = {}, fallback } = {}) 
     const field = detail.path?.[0];
     // Thiếu hẳn trường -> ưu tiên missingByField rồi mới tới fallback;
     // sai định dạng -> ưu tiên mã riêng của trường đó rồi mới tới fallback.
-    const isMissing = detail.type === 'any.required' || detail.type === 'string.empty';
+    // Lỗi nằm trong mảng/object con (path dài hơn 1, ví dụ tasks[0].foodName)
+    // được coi là sai định dạng của trường cha, không phải "thiếu trường".
+    const isMissing =
+      (detail.type === 'any.required' || detail.type === 'string.empty') &&
+      detail.path.length === 1;
     const rc = isMissing
       ? missingByField[field] || fallback
       : byField[field] || fallback;

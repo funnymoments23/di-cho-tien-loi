@@ -87,11 +87,21 @@ di-cho-tien-loi/
   - `DELETE /fridge` — xoá theo body `{ foodName }` (`00224`; thiếu tên `00217`, thực phẩm không tồn tại `00218`, không có quyền `00219`, chưa có trong tủ `00221`).
   - Trường `location` (ngăn mát / ngăn đá / cánh tủ / ngoài tủ) là bổ sung theo đề mục B.3 ([tài liệu 02](02-GOP-Y-DAC-TA-API.md) mục 3.6). Đổi `useWithin` sẽ đặt lại `isNotified` để cron nhắc hết hạn gửi lại. Xoá thực phẩm cũng xoá mục tủ lạnh tham chiếu.
   - `GET /food/search` đã hỗ trợ thêm `inFridge=true|false`.
-- **Kiểm thử tự động**: 252 test (Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh + rate limit), hiện **252/252 pass** — xem [báo cáo kiểm thử](test-report.md).
+- **Nhóm API Đi chợ** (`routes/shopping.route.js`, 8 endpoint) — danh sách đi chợ của nhóm và các món cần mua; trưởng nhóm tạo/sửa/xoá, mọi thành viên xem và tick đã mua.
+  - `POST /shopping` — trưởng nhóm tạo danh sách với `{ name, assignToUsername, note?, date? }` (`00249`; thiếu tên `00239`, thiếu người được giao `00240`, ghi chú/ngày sai định dạng `00241`/`00242`, không phải trưởng nhóm `00243`, username không tồn tại `00245`, người được giao thuộc nhóm khác `00246`).
+  - `PUT /shopping` — sửa `{ listId, newName?, newAssignToUsername?, newNote?, newDate? }` (`00266`; thiếu `listId` `00251`, không có trường cập nhật `00252`, tên/người được giao/ghi chú/ngày mới sai `00253`–`00256`, không phải trưởng nhóm `00258`, danh sách không tồn tại `00260`, thuộc nhóm khác `00261`, người được giao mới không tồn tại `00262`, khác nhóm `00263`).
+  - `DELETE /shopping` — xoá danh sách theo `{ listId }` và xoá luôn các món bên trong (`00275`; thiếu `listId` `00268`, không phải trưởng nhóm `00270`, không tìm thấy `00272`, thuộc nhóm khác `00273`).
+  - `POST /shopping/task` — thêm mảng `{ listId, tasks: [{ foodName, quantity }] }` (`00287`; thiếu `listId` `00277`, thiếu mảng `00278`, mảng sai `00279`, không phải trưởng nhóm `00281`, danh sách không tồn tại `00283`, thuộc nhóm khác `00284`, thực phẩm không có `00285`, trùng món `00285x`).
+  - `GET /shopping/task` (và `GET /shopping`) — danh sách đi chợ của nhóm kèm món, số món và số món đã mua (`00292`; chưa vào nhóm `00288`).
+  - `PUT /shopping/task` — sửa `{ taskId, newFoodName?, newQuantity? }` (`00312`; thiếu `taskId` `00301`, không có trường cập nhật `00302`, tên/số lượng mới sai `00303`/`00304`, không phải trưởng nhóm `00307`, món/thực phẩm không tồn tại `00306`/`00308`, trùng món `00309`).
+  - `DELETE /shopping/task` — xoá món theo `{ taskId }` (`00299`; thiếu `taskId` `00294`, không phải trưởng nhóm `00297`, không tìm thấy `00296`).
+  - `PATCH /shopping/task/:taskId/complete` — API bổ sung đánh dấu đã mua với `{ isCompleted }` (`00312`; mọi thành viên trong nhóm đều tick được — [tài liệu 02](02-GOP-Y-DAC-TA-API.md) mục 3.5).
+  - Nền tảng: model `ShoppingList` (`name`, `groupId`, `assignedTo`, `note`, `date`, `createdBy`) và `Task` (`listId`, `foodId`, `quantity`, `isCompleted`), unique `{ listId, foodId }`; serializer `toPublicShoppingList`/`toPublicTask`.
+- **Kiểm thử tự động**: 333 test (Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh + Đi chợ + rate limit), hiện **333/333 pass** — xem [báo cáo kiểm thử](test-report.md).
 
 ### Chưa làm
 
-- Các model còn lại (ShoppingList, Task, Recipe, MealPlan...), routes/controllers cho các nhóm API còn lại (Đi chợ, Bữa ăn, Công thức).
+- Các model còn lại (MealPlan, Recipe...), routes/controllers cho các nhóm API còn lại (Bữa ăn, Công thức) và các API thống kê `GET /report/*`.
 - API quên mật khẩu và các API bổ sung khác.
 - Upload ảnh (đại diện, thực phẩm) hiện lưu trên đĩa server (`server/uploads/`, đã gitignore); khi deploy cần chuyển sang Cloudinary để không mất ảnh.
 - Ứng dụng mobile và trang admin.
@@ -109,7 +119,7 @@ npm run dev     # http://localhost:5000/it4788/health
 
 ```bash
 cd server
-npm test        # 252 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh + rate limit, dùng MongoDB in-memory, không cần .env
+npm test        # 333 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh + Đi chợ + rate limit, dùng MongoDB in-memory, không cần .env
 ```
 
 ## Tài liệu
@@ -118,7 +128,7 @@ npm test        # 252 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn 
 |---|---|
 | [01 – Kế hoạch & Kiến trúc](01-KE-HOACH-KIEN-TRUC.md) | Kiến trúc hệ thống, thiết kế database, cấu trúc thư mục, danh sách màn hình, lộ trình 8 tuần, phân công |
 | [02 – Rà soát đặc tả API](02-GOP-Y-DAC-TA-API.md) | 16 lỗi phát hiện trong mô tả API của đề và đề xuất sửa đổi (phần tính điểm cộng) |
-| [Báo cáo kiểm thử](test-report.md) | 252 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh: ma trận case, kết quả, phát hiện và cách chạy |
+| [Báo cáo kiểm thử](test-report.md) | 333 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh + Đi chợ: ma trận case, kết quả, phát hiện và cách chạy |
 
 ## Bắt đầu
 
