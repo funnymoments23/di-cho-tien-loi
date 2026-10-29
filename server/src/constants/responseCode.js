@@ -375,6 +375,56 @@ const RESPONSE_CODE = Object.freeze({
       BAD_REQUEST,
       'Khoảng thời gian không hợp lệ. Vui lòng cung cấp ngày dạng YYYY-MM-DD, from <= to và tối đa 366 ngày.'
     ),
+
+    // ===== Quản trị người dùng (admin/user) =====
+    // Nhóm API bổ sung: đề yêu cầu admin "quản lý tài khoản người dùng" nhưng
+    // đặc tả API gốc không có endpoint nào. Dải 00387–00403 còn trống.
+    ADMIN_USER_GET_LIST_SUCCESS: def('00387', OK, 'Lấy danh sách người dùng thành công'),
+    ADMIN_USER_GET_DETAIL_SUCCESS: def('00388', OK, 'Lấy thông tin người dùng thành công'),
+    ADMIN_USER_UPDATE_SUCCESS: def('00389', OK, 'Cập nhật tài khoản người dùng thành công'),
+    ADMIN_USER_STATUS_SUCCESS: def('00390', OK, 'Cập nhật trạng thái tài khoản thành công'),
+    ADMIN_USER_DELETE_SUCCESS: def('00391', OK, 'Xoá tài khoản người dùng thành công'),
+    ADMIN_USER_NOT_FOUND: def('00392', NOT_FOUND, 'Không thể tìm thấy người dùng.'),
+    ADMIN_USER_INVALID_ID: def('00393', BAD_REQUEST, 'ID người dùng không hợp lệ.'),
+    ADMIN_USER_INVALID_QUERY: def(
+      '00394',
+      BAD_REQUEST,
+      'Tham số truy vấn không hợp lệ. Vui lòng kiểm tra keyword, role, status, isVerified, groupId, page, limit, sort, order.'
+    ),
+    ADMIN_USER_UPDATE_MISSING_FIELDS: def(
+      '00395',
+      BAD_REQUEST,
+      'Vui lòng cung cấp ít nhất một trường để cập nhật.'
+    ),
+    ADMIN_USER_UPDATE_INVALID_FIELDS: def('00396', BAD_REQUEST, 'Dữ liệu cập nhật không hợp lệ.'),
+    ADMIN_USER_EMAIL_EXISTS: def('00397', CONFLICT, 'Một tài khoản với địa chỉ email này đã tồn tại.'),
+    ADMIN_USER_USERNAME_EXISTS: def(
+      '00398',
+      CONFLICT,
+      'Đã có một người dùng với tên người dùng này, vui lòng nhập tên khác.'
+    ),
+    ADMIN_USER_CANNOT_CHANGE_OWN_ROLE: def(
+      '00399',
+      BAD_REQUEST,
+      'Bạn không thể tự thay đổi quyền của chính mình.'
+    ),
+    ADMIN_USER_CANNOT_LOCK_SELF: def(
+      '00400',
+      BAD_REQUEST,
+      'Bạn không thể khoá tài khoản của chính mình.'
+    ),
+    ADMIN_USER_CANNOT_DELETE_SELF: def(
+      '00401',
+      BAD_REQUEST,
+      'Bạn không thể xoá tài khoản của chính mình qua chức năng quản trị. Hãy dùng DELETE /user.'
+    ),
+    ADMIN_USER_INVALID_STATUS: def(
+      '00402',
+      BAD_REQUEST,
+      'Trạng thái tài khoản không hợp lệ. Vui lòng gửi isActive là true hoặc false.'
+    ),
+    // 00403: chặn đăng nhập / dùng token khi tài khoản bị admin khoá.
+    ACCOUNT_LOCKED: def('00403', FORBIDDEN, 'Tài khoản của bạn đã bị khoá. Vui lòng liên hệ quản trị viên.'),
 });
 
 module.exports = RESPONSE_CODE;

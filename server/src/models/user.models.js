@@ -18,6 +18,10 @@ const userSchema = new mongoose.Schema({
   passwordResetCodeExpiresAt: { type: Date,   select: false },
   refreshToken: { type: String, select: false },
   role:    { type: String, enum: ['user', 'admin'], default: 'user' },
+  // Admin khoá/mở khoá tài khoản. Tài khoản cũ chưa có trường này được coi là
+  // đang hoạt động (so sánh `=== false` ở middleware/service).
+  isActive: { type: Boolean, default: true },
+  lockedAt: { type: Date, default: null },
   groupId: { type: mongoose.Schema.Types.ObjectId, ref: 'Group', default: null },
 }, { timestamps: true });
 

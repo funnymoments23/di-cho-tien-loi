@@ -36,7 +36,7 @@ di-cho-tien-loi/
   - `constants/responseCode.js`: bảng mã response (code 5 chữ số, HTTP status, message) theo đề.
   - `utils/response.js` (`sendSuccess`, `fail`) và `utils/AppError.js`.
   - `middlewares/error.middleware.js`: xử lý 404 và lỗi tập trung (kể cả JSON sai định dạng).
-- Model `User` ([user.models.js](../server/src/models/user.models.js)): email, mật khẩu, tên, username, avatar, giới tính, ngày sinh, ngôn ngữ, múi giờ, device token, xác minh email, refresh token, role (`user`/`admin`), `groupId`.
+- Model `User` ([user.models.js](../server/src/models/user.models.js)): email, mật khẩu, tên, username, avatar, giới tính, ngày sinh, ngôn ngữ, múi giờ, device token, xác minh email, refresh token, role (`user`/`admin`), `isActive`/`lockedAt` (admin khoá tài khoản), `groupId`.
 - **Nhóm API Auth** (`routes/user.route.js`): 8 endpoint chạy được trên Postman.
   - `POST /it4788/user` — đăng ký, gửi mã 6 số qua email (`00035`).
   - `POST /it4788/user/verify-email` — nhập `{ code, token }` (`00058`).
@@ -74,6 +74,13 @@ di-cho-tien-loi/
   - `PUT /admin/unit` — đổi tên với body `{ name, newName }` (`00122`; thiếu trường `00117`, trùng tên cũ `00118`, không tìm thấy `00119`, tên mới đã tồn tại `00113`).
   - `DELETE /admin/unit` — xoá theo body `{ name }` (`00128`; thiếu tên `00123`, không tìm thấy `00125`).
   - Nền tảng: model `Category`/`Unit` (tên unique, trim, tối đa 50 ký tự), middleware `admin.middleware.js` (role `admin`, từ chối `00017`), serializer `toPublicLookup`.
+- **Nhóm API Quản trị người dùng** (`routes/admin.route.js`, 5 endpoint) — admin quản lý tài khoản người dùng; phần bổ sung vì đặc tả API gốc không có endpoint nào.
+  - `GET /admin/user` — danh sách có lọc `keyword`, `role`, `status`, `isVerified`, `groupId` và phân trang `page`/`limit` (`00387`; query sai `00394`).
+  - `GET /admin/user/:id` — chi tiết một tài khoản, kèm `groupName` (`00388`; id sai `00393`, không tìm thấy `00392`).
+  - `PUT /admin/user/:id` — sửa hồ sơ, `role`, `isVerified` (`00389`; body rỗng `00395`, dữ liệu sai `00396`/`00077`, email trùng `00397`, username trùng `00398`, tự hạ quyền `00399`).
+  - `PATCH /admin/user/:id/status` — khoá / mở khoá với `{ isActive }` (`00390`; thiếu/sai `isActive` `00402`, tự khoá `00400`).
+  - `DELETE /admin/user/:id` — xoá tài khoản, gỡ khỏi nhóm và chuyển quyền trưởng nhóm nếu cần (`00391`; tự xoá `00401`, không tìm thấy `00392`).
+  - Nền tảng: `User.isActive`/`lockedAt`; `auth.middleware.js` đọc lại `role`/`isActive` từ DB mỗi request nên khoá tài khoản và đổi quyền có hiệu lực ngay; đăng nhập / refresh token của tài khoản bị khoá trả `00403`; serializer `toAdminUser`.
 - **Nhóm API Thực phẩm** (`routes/food.route.js`, 5 endpoint) — danh mục thực phẩm riêng của từng nhóm, tên duy nhất trong phạm vi nhóm.
   - `GET /food` — danh sách thực phẩm của nhóm, kèm `categoryName`/`unitName` (`00188`; chưa vào nhóm `00185`).
   - `GET /food/search` — tìm theo `keyword` (không phân biệt hoa/thường) và/hoặc `categoryName` (`00188`).
@@ -129,7 +136,7 @@ di-cho-tien-loi/
   - Multer giữ ảnh trong RAM (tối đa 5MB, chỉ nhận `image/*`) rồi đẩy lên bằng `upload_stream`; không ghi xuống đĩa nên deploy lại không mất ảnh.
   - Ảnh đại diện được crop vuông 500×500 (ưu tiên khuôn mặt), ảnh thực phẩm giới hạn chiều rộng 1000px.
   - Cấu hình `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLOUDINARY_FOLDER` trong `.env`.
-- **Kiểm thử tự động**: 462 test (Auth + Quên mật khẩu + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + rate limit + cron/push), hiện **462/462 pass** — xem [báo cáo kiểm thử](test-report.md).
+- **Kiểm thử tự động**: 487 test (Auth + Quên mật khẩu + Tài khoản + Nhóm + Danh mục + Đơn vị + Quản trị người dùng + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + rate limit + cron/push), hiện **487/487 pass** — xem [báo cáo kiểm thử](test-report.md).
 
 ### Chưa làm
 
@@ -148,7 +155,7 @@ npm run dev     # http://localhost:5000/it4788/health
 
 ```bash
 cd server
-npm test        # 462 test API Auth + Quên mật khẩu + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + rate limit + cron/push, dùng MongoDB in-memory, không cần .env
+npm test        # 487 test API Auth + Quên mật khẩu + Tài khoản + Nhóm + Danh mục + Đơn vị + Quản trị người dùng + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + rate limit + cron/push, dùng MongoDB in-memory, không cần .env
 ```
 
 ## Tài liệu
@@ -157,7 +164,7 @@ npm test        # 462 test API Auth + Quên mật khẩu + Tài khoản + Nhóm 
 |---|---|
 | [01 – Kế hoạch & Kiến trúc](01-KE-HOACH-KIEN-TRUC.md) | Kiến trúc hệ thống, thiết kế database, cấu trúc thư mục, danh sách màn hình, lộ trình 8 tuần, phân công |
 | [02 – Rà soát đặc tả API](02-GOP-Y-DAC-TA-API.md) | 17 lỗi phát hiện trong mô tả API của đề và đề xuất sửa đổi (phần tính điểm cộng) |
-| [Báo cáo kiểm thử](test-report.md) | 462 test API Auth + Quên mật khẩu + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + cron/push: ma trận case, kết quả, phát hiện và cách chạy |
+| [Báo cáo kiểm thử](test-report.md) | 487 test API Auth + Quên mật khẩu + Tài khoản + Nhóm + Danh mục + Đơn vị + Quản trị người dùng + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + cron/push: ma trận case, kết quả, phát hiện và cách chạy |
 
 ## Bắt đầu
 

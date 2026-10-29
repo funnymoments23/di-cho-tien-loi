@@ -182,6 +182,8 @@ const login = async ({ email, password }) => {
   const user = await User.findOne({ email }).select('+password');
 
   if (!user) throw fail(RC.LOGIN_ACCOUNT_NOT_FOUND); // 00042
+  // Tài khoản bị admin khoá thì không được đăng nhập dù mật khẩu đúng.
+  if (user.isActive === false) throw fail(RC.ACCOUNT_LOCKED); // 00403
   // Model chỉ có isVerified (00043 dành cho trường hợp chưa kích hoạt tài khoản).
   if (!user.isVerified) throw fail(RC.LOGIN_EMAIL_NOT_VERIFIED); // 00044
 
@@ -199,6 +201,8 @@ const refresh = async (refreshToken) => {
 
   const user = await User.findById(payload.sub).select('+refreshToken');
   if (!user) throw fail(RC.REFRESH_TOKEN_USER_MISMATCH); // 00061
+  // Tài khoản bị khoá thì không được cấp lại token.
+  if (user.isActive === false) throw fail(RC.ACCOUNT_LOCKED); // 00403
 
   // Không khớp hash đang lưu => token đã bị thu hồi (logout) hoặc đã rotate.
   const stored = user.refreshToken;

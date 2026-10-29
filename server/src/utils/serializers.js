@@ -18,6 +18,26 @@ const toPublicUser = (user) => ({
 });
 
 /**
+ * Chuyển document User thành object cho API quản trị (admin/user).
+ * Khác toPublicUser: có trạng thái khoá, thời điểm tạo/cập nhật và tên nhóm
+ * (khi `groupId` đã được populate với `name`).
+ */
+const toAdminUser = (user) => {
+  const group = user.groupId;
+  const isGroupPopulated = Boolean(group && typeof group === 'object' && group.name !== undefined);
+
+  return {
+    ...toPublicUser(user),
+    groupId: isGroupPopulated ? group._id : group ?? null,
+    groupName: isGroupPopulated ? group.name ?? null : null,
+    isActive: user.isActive !== false,
+    lockedAt: user.lockedAt ?? null,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
+};
+
+/**
  * Chuyển document Group thành object trả cho client.
  * `members` (mảng ObjectId) không trả trực tiếp; API xem nhóm trả kèm
  * danh sách người dùng đã qua toPublicUser.
@@ -211,6 +231,7 @@ const toPublicRecipe = (recipe) => {
 
 module.exports = {
   toPublicUser,
+  toAdminUser,
   toPublicGroup,
   toPublicLookup,
   toPublicFood,

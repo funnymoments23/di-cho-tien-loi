@@ -1,10 +1,10 @@
-# Báo cáo kiểm thử — nhóm API Auth, Quên mật khẩu, Tài khoản, Nhóm, Danh mục, Đơn vị, Thực phẩm, Tủ lạnh, Đi chợ, Bữa ăn, Công thức, Báo cáo & Cron/Push
+# Báo cáo kiểm thử — nhóm API Auth, Quên mật khẩu, Tài khoản, Nhóm, Danh mục, Đơn vị, Quản trị người dùng, Thực phẩm, Tủ lạnh, Đi chợ, Bữa ăn, Công thức, Báo cáo & Cron/Push
 
-- **Ngày chạy:** 29/10/2026 (bổ sung nhóm API Quên mật khẩu)
-- **Phạm vi:** 6 endpoint Auth + 2 endpoint Quên mật khẩu + 5 endpoint Tài khoản + 6 endpoint Nhóm + 4 endpoint Danh mục + 4 endpoint Đơn vị + 5 endpoint Thực phẩm + 5 endpoint Tủ lạnh + 8 endpoint Đi chợ + 5 endpoint Bữa ăn + 4 endpoint Công thức + 5 endpoint Báo cáo (`server/src/routes/user.route.js`, `group.route.js`, `admin.route.js`, `food.route.js`, `fridge.route.js`, `shopping.route.js`, `meal.route.js`, `recipe.route.js`, `report.route.js`) + endpoint health + rate limit
+- **Ngày chạy:** 29/10/2026 (bổ sung nhóm API Quản trị người dùng)
+- **Phạm vi:** 6 endpoint Auth + 2 endpoint Quên mật khẩu + 5 endpoint Tài khoản + 6 endpoint Nhóm + 4 endpoint Danh mục + 4 endpoint Đơn vị + 5 endpoint Quản trị người dùng + 5 endpoint Thực phẩm + 5 endpoint Tủ lạnh + 8 endpoint Đi chợ + 5 endpoint Bữa ăn + 4 endpoint Công thức + 5 endpoint Báo cáo (`server/src/routes/user.route.js`, `group.route.js`, `admin.route.js`, `food.route.js`, `fridge.route.js`, `shopping.route.js`, `meal.route.js`, `recipe.route.js`, `report.route.js`) + endpoint health + rate limit
 - **Công cụ:** Jest 30.5.2, Supertest 7.3.1, mongodb-memory-server 11.3.0
 - **Môi trường:** Windows, Node.js v24.11.0, MongoDB in-memory 8.2.6
-- **Kết quả:** **462/462 test PASS**, 15 test suite, ~65 giây (sau khi binary Mongo đã tải sẵn)
+- **Kết quả:** **487/487 test PASS**, 16 test suite, ~89 giây (sau khi binary Mongo đã tải sẵn)
 
 ## Cách chạy
 
@@ -22,6 +22,7 @@ Cấu hình: [`server/jest.config.js`](../server/jest.config.js), biến môi tr
 [`server/tests/group.test.js`](../server/tests/group.test.js),
 [`server/tests/category.test.js`](../server/tests/category.test.js),
 [`server/tests/unit.test.js`](../server/tests/unit.test.js),
+[`server/tests/admin-user.test.js`](../server/tests/admin-user.test.js),
 [`server/tests/food.test.js`](../server/tests/food.test.js),
 [`server/tests/fridge.test.js`](../server/tests/fridge.test.js),
 [`server/tests/shopping.test.js`](../server/tests/shopping.test.js),
@@ -952,6 +953,69 @@ Ghi chú nhóm Công thức:
 |---|---|---|---|
 | R24 | Có dữ liệu mua sắm + tiêu thụ | Trả đủ `range`, `shopping`, `consumption`, `waste`, `fridge` với số liệu khớp báo cáo riêng | PASS |
 
+### Nhóm API Quản trị người dùng (`tests/admin-user.test.js`) — 25/25
+
+Đề yêu cầu admin "quản lý tài khoản người dùng" nhưng đặc tả API gốc không có endpoint nào; nhóm bổ sung 5 endpoint dưới `/it4788/admin/user` với mã `00387`–`00403`.
+
+#### `GET /it4788/admin/user` — danh sách + lọc + phân trang (6/6)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 463 | Không có token | 401 / `00006` | PASS |
+| 464 | Người dùng thường gọi API | 403 / `00017` | PASS |
+| 465 | Admin lấy danh sách | 200 / `00387`; `{ items, total, page, limit, totalPages }`, không lộ `password`/`refreshToken`/`verificationCode`, có `isActive`, `createdAt` | PASS |
+| 466 | Lọc `keyword`, `role`, `status`, `isVerified` | Đúng số lượng và đúng bản ghi; keyword tìm trong email/tên/username | PASS |
+| 467 | Phân trang `page=2&limit=2` | `total=3`, `totalPages=2`, trang 2 còn 1 bản ghi | PASS |
+| 468 | Query sai (`role=superadmin`, `page=0`, `limit=101`) | 400 / `00394` | PASS |
+
+#### `GET /it4788/admin/user/:id` — chi tiết (3/3)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 469 | `:id` không phải ObjectId | 400 / `00393` | PASS |
+| 470 | Không tìm thấy người dùng | 404 / `00392` | PASS |
+| 471 | Xem chi tiết | 200 / `00388`; có `groupName` khi người dùng thuộc nhóm | PASS |
+
+#### `PUT /it4788/admin/user/:id` — cập nhật tài khoản (8/8)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 472 | Body rỗng | 400 / `00395` | PASS |
+| 473 | Tên sai định dạng | 400 / `00077` | PASS |
+| 474 | `role` hoặc `isVerified` sai | 400 / `00396` | PASS |
+| 475 | Email đã có người dùng | 409 / `00397` | PASS |
+| 476 | Username đã có người dùng | 409 / `00398` | PASS |
+| 477 | Admin tự hạ quyền chính mình | 400 / `00399`; role trong DB giữ nguyên `admin` | PASS |
+| 478 | Cập nhật tên/email/username/role/isVerified | 200 / `00389`; DB lưu đúng giá trị | PASS |
+| 479 | Đổi role | Quyền mới có hiệu lực ngay với token cũ (auth đọc role từ DB); refresh token bị thu hồi | PASS |
+
+#### `PATCH /it4788/admin/user/:id/status` — khoá / mở khoá (4/4)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 480 | Thiếu `isActive` | 400 / `00402` | PASS |
+| 481 | Admin tự khoá chính mình | 400 / `00400` | PASS |
+| 482 | Khoá tài khoản | 200 / `00390`; `isActive=false`, có `lockedAt`, refresh token bị xoá; token cũ → 403 / `00403`; refresh và đăng nhập cũng `00403` | PASS |
+| 483 | Mở khoá | 200 / `00390`; `isActive=true`, `lockedAt=null`; đăng nhập lại được | PASS |
+
+#### `DELETE /it4788/admin/user/:id` — xoá tài khoản (4/4)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 484 | Admin tự xoá chính mình | 400 / `00401`; tài khoản vẫn còn | PASS |
+| 485 | Xoá thành công | 200 / `00391`; DB không còn; token cũ → 404 / `00052` | PASS |
+| 486 | Xoá trưởng nhóm | 200 / `00391`; quyền trưởng nhóm chuyển cho thành viên còn lại, `members` được dọn | PASS |
+| 487 | Không tìm thấy người dùng | 404 / `00392` | PASS |
+
+Ghi chú nhóm Quản trị người dùng:
+
+- Toàn bộ endpoint yêu cầu `role = admin` (`admin.middleware.js`, từ chối `00017`).
+- Model `User` bổ sung `isActive` (mặc định `true`) và `lockedAt`. Tài khoản tạo trước khi có trường này được coi là đang hoạt động (`isActive !== false`).
+- `auth.middleware.js` đọc lại `role` và `isActive` từ DB mỗi request: khoá tài khoản hoặc đổi quyền có hiệu lực ngay, không phải chờ access token 1 giờ hết hạn. Đăng nhập và refresh token cũng chặn tài khoản bị khoá (`00403`).
+- Khoá tài khoản thu hồi `refreshToken`; đổi `role` cũng thu hồi để buộc đăng nhập lại.
+- `DELETE /admin/user/:id` dùng chung `detachUserFromGroup`: xoá trưởng nhóm thì chuyển quyền cho thành viên lâu năm nhất, người cuối cùng thì xoá cả nhóm và dữ liệu liên quan.
+- Chặn admin tự hạ quyền / tự khoá / tự xoá để không mất quyền quản trị ngoài ý muốn. Chưa chặn trường hợp admin hạ quyền admin cuối cùng của hệ thống (xem "Còn tồn tại").
+
 ## 4 vấn đề đã khắc phục
 
 | # | Trước | Sau |
@@ -972,6 +1036,7 @@ Ghi chú triển khai:
 - `.env` hiện không có `JWT_VERIFY_SECRET` / `JWT_RESET_SECRET`, nên verification token và reset token dùng chung secret với access token (vẫn an toàn nhờ claim `typ`). Nên bổ sung secret riêng cho production.
 - Rate limit chưa có test cho trường hợp nhiều IP khác nhau (cần giả lập `X-Forwarded-For` + `trust proxy`).
 - `DELETE /admin/category` và `DELETE /admin/unit` chưa kiểm tra thực phẩm đang tham chiếu: xoá danh mục/đơn vị sẽ để lại `Food` trỏ tới id không còn tồn tại. Cần chặn (trả mã phù hợp) hoặc chuyển thực phẩm sang danh mục/đơn vị mặc định.
+- `PUT /admin/user/:id` chưa chặn hạ quyền **admin cuối cùng** của hệ thống (chỉ chặn admin tự hạ quyền chính mình). Nếu có nhiều admin, một admin vẫn có thể hạ quyền admin còn lại; cần bổ sung kiểm tra `countDocuments({ role: 'admin', isActive: { $ne: false } }) > 1` nếu muốn chắc chắn không mất quyền quản trị.
 
 ## Vấn đề môi trường đã xử lý
 
