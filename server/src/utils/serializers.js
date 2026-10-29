@@ -155,6 +155,59 @@ const toPublicShoppingList = (list, tasks) => {
   return data;
 };
 
+/**
+ * Chuyển document MealPlan thành object trả cho client.
+ * `foodId` cần được populate (kèm `categoryId` / `unitId` chỉ lấy `name`)
+ * trước khi gọi.
+ */
+const toPublicMealPlan = (plan) => {
+  const food = plan.foodId;
+  const isPopulated = Boolean(food && typeof food === 'object' && food.name !== undefined);
+  const category = isPopulated ? food.categoryId : null;
+  const unit = isPopulated ? food.unitId : null;
+
+  return {
+    id: plan._id,
+    groupId: plan.groupId,
+    foodId: isPopulated ? food._id : food,
+    foodName: isPopulated ? food.name : null,
+    image: isPopulated ? food.image ?? null : null,
+    categoryId: category?._id ?? null,
+    categoryName: category?.name ?? null,
+    unitId: unit?._id ?? null,
+    unitName: unit?.name ?? null,
+    timestamp: plan.timestamp,
+    name: plan.name,
+    createdBy: plan.createdBy ?? null,
+    createdAt: plan.createdAt,
+    updatedAt: plan.updatedAt,
+  };
+};
+
+/**
+ * Chuyển document Recipe thành object trả cho client.
+ * `foodId` cần được populate (chỉ lấy `name`, `image`) trước khi gọi.
+ * `htmlContent` được trả đầy đủ vì màn hình chi tiết công thức cần render HTML.
+ */
+const toPublicRecipe = (recipe) => {
+  const food = recipe.foodId;
+  const isPopulated = Boolean(food && typeof food === 'object' && food.name !== undefined);
+
+  return {
+    id: recipe._id,
+    groupId: recipe.groupId,
+    foodId: isPopulated ? food._id : food,
+    foodName: isPopulated ? food.name : null,
+    image: isPopulated ? food.image ?? null : null,
+    name: recipe.name,
+    description: recipe.description,
+    htmlContent: recipe.htmlContent,
+    createdBy: recipe.createdBy ?? null,
+    createdAt: recipe.createdAt,
+    updatedAt: recipe.updatedAt,
+  };
+};
+
 module.exports = {
   toPublicUser,
   toPublicGroup,
@@ -163,4 +216,6 @@ module.exports = {
   toPublicFridgeItem,
   toPublicTask,
   toPublicShoppingList,
+  toPublicMealPlan,
+  toPublicRecipe,
 };

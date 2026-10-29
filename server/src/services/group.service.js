@@ -4,6 +4,8 @@ const User = require('../models/user.models');
 const FridgeItem = require('../models/fridgeItem.models');
 const ShoppingList = require('../models/shoppingList.models');
 const Task = require('../models/task.models');
+const MealPlan = require('../models/mealPlan.models');
+const Recipe = require('../models/recipe.models');
 const RC = require('../constants/responseCode');
 const { fail } = require('../utils/response');
 const { toPublicUser, toPublicGroup } = require('../utils/serializers');
@@ -168,11 +170,14 @@ const detachUserFromGroup = async (user, preloadedGroup) => {
 
     if (remaining.length === 0) {
       await Group.deleteOne({ _id: group._id });
-      // Nhóm bị xoá thì dọn luôn đồ trong tủ lạnh và danh sách đi chợ của nhóm.
+      // Nhóm bị xoá thì dọn luôn đồ trong tủ lạnh, danh sách đi chợ,
+      // kế hoạch bữa ăn và công thức nấu ăn của nhóm.
       await FridgeItem.deleteMany({ groupId: group._id });
       const listIds = await ShoppingList.distinct('_id', { groupId: group._id });
       await Task.deleteMany({ listId: { $in: listIds } });
       await ShoppingList.deleteMany({ groupId: group._id });
+      await MealPlan.deleteMany({ groupId: group._id });
+      await Recipe.deleteMany({ groupId: group._id });
       groupDeleted = true;
     } else {
       newAdminId = remaining[0]._id;

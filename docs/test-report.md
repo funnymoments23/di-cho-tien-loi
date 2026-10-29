@@ -1,10 +1,10 @@
-# Báo cáo kiểm thử — nhóm API Auth, Tài khoản, Nhóm, Danh mục, Đơn vị, Thực phẩm, Tủ lạnh & Đi chợ
+# Báo cáo kiểm thử — nhóm API Auth, Tài khoản, Nhóm, Danh mục, Đơn vị, Thực phẩm, Tủ lạnh, Đi chợ, Bữa ăn & Công thức
 
-- **Ngày chạy:** 29/10/2026 (bổ sung nhóm API Đi chợ)
-- **Phạm vi:** 6 endpoint Auth + 5 endpoint Tài khoản + 6 endpoint Nhóm + 4 endpoint Danh mục + 4 endpoint Đơn vị + 5 endpoint Thực phẩm + 5 endpoint Tủ lạnh + 8 endpoint Đi chợ (`server/src/routes/user.route.js`, `group.route.js`, `admin.route.js`, `food.route.js`, `fridge.route.js`, `shopping.route.js`) + endpoint health + rate limit
+- **Ngày chạy:** 29/10/2026 (bổ sung nhóm API Bữa ăn & Công thức)
+- **Phạm vi:** 6 endpoint Auth + 5 endpoint Tài khoản + 6 endpoint Nhóm + 4 endpoint Danh mục + 4 endpoint Đơn vị + 5 endpoint Thực phẩm + 5 endpoint Tủ lạnh + 8 endpoint Đi chợ + 5 endpoint Bữa ăn + 4 endpoint Công thức (`server/src/routes/user.route.js`, `group.route.js`, `admin.route.js`, `food.route.js`, `fridge.route.js`, `shopping.route.js`, `meal.route.js`, `recipe.route.js`) + endpoint health + rate limit
 - **Công cụ:** Jest 30.5.2, Supertest 7.3.1, mongodb-memory-server 11.3.0
 - **Môi trường:** Windows, Node.js v24.11.0, MongoDB in-memory 8.2.6
-- **Kết quả:** **333/333 test PASS**, 9 test suite, ~28 giây (sau khi binary Mongo đã tải sẵn)
+- **Kết quả:** **399/399 test PASS**, 11 test suite, ~35 giây (sau khi binary Mongo đã tải sẵn)
 
 ## Cách chạy
 
@@ -23,7 +23,9 @@ Cấu hình: [`server/jest.config.js`](../server/jest.config.js), biến môi tr
 [`server/tests/unit.test.js`](../server/tests/unit.test.js),
 [`server/tests/food.test.js`](../server/tests/food.test.js),
 [`server/tests/fridge.test.js`](../server/tests/fridge.test.js),
-[`server/tests/shopping.test.js`](../server/tests/shopping.test.js) và
+[`server/tests/shopping.test.js`](../server/tests/shopping.test.js),
+[`server/tests/meal.test.js`](../server/tests/meal.test.js),
+[`server/tests/recipe.test.js`](../server/tests/recipe.test.js) và
 [`server/tests/rate-limit.test.js`](../server/tests/rate-limit.test.js).
 
 Đặc điểm bộ test:
@@ -31,7 +33,7 @@ Cấu hình: [`server/jest.config.js`](../server/jest.config.js), biến môi tr
 - Dùng **MongoDB in-memory** nên không chạm vào DB thật, không cần `.env`, chạy được trên CI.
 - **Mock `utils/email.js`** — không gửi email thật; mã 6 số lấy từ `mock.calls` để test luồng verify.
 - `BCRYPT_ROUNDS=4` cho nhanh; JWT secret cố định trong `setup-env.js`.
-- `User.deleteMany({})` + `Group.deleteMany({})` + `Category.deleteMany({})` + `Unit.deleteMany({})` + `Food.deleteMany({})` + `FridgeItem.deleteMany({})` + `ShoppingList.deleteMany({})` + `Task.deleteMany({})` trước mỗi test → các test độc lập, không phụ thuộc thứ tự.
+- `User.deleteMany({})` + `Group.deleteMany({})` + `Category.deleteMany({})` + `Unit.deleteMany({})` + `Food.deleteMany({})` + `FridgeItem.deleteMany({})` + `ShoppingList.deleteMany({})` + `Task.deleteMany({})` + `MealPlan.deleteMany({})` + `Recipe.deleteMany({})` trước mỗi test → các test độc lập, không phụ thuộc thứ tự.
 - Rate limit tắt mặc định trong bộ test chức năng (`AUTH_RATE_LIMIT_MAX=0`), có test riêng với ngưỡng thấp.
 
 ## Kết quả theo endpoint
@@ -686,6 +688,140 @@ Ghi chú nhóm Đi chợ:
 - Xoá danh sách xoá luôn `Task` bên trong; `GET /shopping/task` gom nhiệm vụ theo danh sách và trả `taskCount` / `completedCount` để app hiển thị tiến độ.
 - `PUT /shopping/task` nhận thêm `newQuantity` theo đề xuất [tài liệu 02](02-GOP-Y-DAC-TA-API.md) mục 1.4 (đặc tả gốc bỏ sót trường này).
 - `middlewares/validate.middleware.js` được chỉnh để lỗi thiếu trường **bên trong mảng** (`tasks[0].foodName`) trả `00279` (mảng sai) thay vì `00278` (thiếu mảng).
+
+### Nhóm API Bữa ăn (`tests/meal.test.js`) — 35/35
+
+#### `POST /it4788/meal` — lập kế hoạch bữa ăn (10/10)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 334 | Không có token | 401 / `00006` | PASS |
+| 335 | Body rỗng | 400 / `00313` | PASS |
+| 336 | `foodName` rỗng | 400 / `00313` | PASS |
+| 337 | Thiếu `timestamp` / `timestamp` sai định dạng | 400 / `00313` và `00315` | PASS |
+| 338 | Tên bữa `chiều` | 400 / `00316` | PASS |
+| 339 | Người dùng chưa vào nhóm | 403 / `00319` | PASS |
+| 340 | Thành viên (không phải trưởng nhóm) lập kế hoạch | 403 / `00319` | PASS |
+| 341 | Thực phẩm không tồn tại | 404 / `00317` | PASS |
+| 342 | Thực phẩm thuộc nhóm khác | 404 / `00317` | PASS |
+| 343 | Trưởng nhóm tạo hợp lệ; `"Sang"` chuẩn hoá thành `"sáng"` | 201 / `00322`; trả kèm `foodName`, `categoryName`, `unitName` | PASS |
+
+#### `GET /it4788/meal` — lịch bữa ăn (5/5)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 344 | Không có token | 401 / `00006` | PASS |
+| 345 | Người dùng chưa vào nhóm | 403 / `00345` | PASS |
+| 346 | Danh sách đầy đủ, sắp theo ngày rồi sáng → trưa → tối | 200 / `00348` | PASS |
+| 347 | `?date=` và `?from=&to=` lọc đúng ngày / khoảng ngày | 200 / `00348`; đúng số bản ghi | PASS |
+| 348 | Không lộ kế hoạch của nhóm khác | 200 / `00348`; mảng rỗng | PASS |
+
+#### `PUT /it4788/meal` — sửa kế hoạch bữa ăn (10/10)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 349 | Thiếu `planId` | 400 / `00332` | PASS |
+| 350 | `planId` sai định dạng | 400 / `00332` | PASS |
+| 351 | Không có trường nào để cập nhật | 400 / `00333` | PASS |
+| 352 | `newFoodName` rỗng | 400 / `00334` | PASS |
+| 353 | `newTimestamp` sai định dạng | 400 / `00335` | PASS |
+| 354 | `newName` không hợp lệ | 400 / `00336` | PASS |
+| 355 | Kế hoạch không tồn tại | 404 / `00337` | PASS |
+| 356 | Thành viên (không phải trưởng nhóm) sửa | 403 / `00339` | PASS |
+| 357 | Thực phẩm mới không tồn tại | 404 / `00341` | PASS |
+| 358 | Cập nhật món, ngày và tên bữa | 200 / `00344`; dữ liệu đổi đúng | PASS |
+
+#### `DELETE /it4788/meal` — xoá kế hoạch bữa ăn (5/5)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 359 | Thiếu `planId` | 400 / `00323` | PASS |
+| 360 | `planId` sai định dạng | 400 / `00324` | PASS |
+| 361 | Kế hoạch không tồn tại | 404 / `00325` | PASS |
+| 362 | Thành viên (không phải trưởng nhóm) xoá | 403 / `00327` | PASS |
+| 363 | Trưởng nhóm xoá | 200 / `00330`; trả lại dữ liệu vừa xoá | PASS |
+
+#### `GET /it4788/meal/suggestion` — gợi ý món từ tủ lạnh (4/4)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 364 | Người dùng chưa vào nhóm | 403 / `00345` | PASS |
+| 365 | Tủ lạnh trống | 200 / `00348`; mảng rỗng | PASS |
+| 366 | Ưu tiên thực phẩm sắp hết hạn, bỏ qua mục đã hết hạn | 200 / `00348`; cà rốt (còn 1 ngày) đứng trước thịt bò (còn 5 ngày) | PASS |
+| 367 | `?limit=1` | 200 / `00348`; đúng 1 gợi ý | PASS |
+
+#### Dọn dữ liệu liên quan (1/1)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 368 | Xoá thực phẩm đang có trong kế hoạch bữa ăn / công thức | 200 / `00184`; kế hoạch và công thức tham chiếu cũng bị xoá | PASS |
+
+Ghi chú nhóm Bữa ăn:
+
+- Quyền: **chỉ trưởng nhóm** được lập / sửa / xoá kế hoạch bữa ăn (mã `00319`, `00339`, `00327`); mọi thành viên được xem lịch và gợi ý món.
+- Tên bữa nhận cả có dấu và không dấu (`Sang`, `sang`, `sáng`) rồi chuẩn hoá về `sáng` / `trưa` / `tối` trước khi lưu, tránh lỗi gõ từ client.
+- `GET /meal` hỗ trợ `?date=YYYY-MM-DD` cho màn hình một ngày và `?from=&to=` cho màn hình tuần; tham số ngày sai định dạng bị bỏ qua thay vì làm hỏng cả danh sách.
+- `GET /meal/suggestion` (API bổ sung, [tài liệu 02](02-GOP-Y-DAC-TA-API.md) mục 3.2) lấy các mục còn hạn trong tủ, tìm công thức gắn với thực phẩm đó và sắp xếp theo hạn sử dụng gần nhất. Mục đã hết hạn bị loại khỏi gợi ý để không đề xuất thực phẩm không còn dùng được.
+- Mỗi công thức chỉ gắn một `foodId` nên chưa xếp hạng được theo số nguyên liệu khớp; hướng mở rộng là thêm `ingredients[]` vào `recipes` (docs/01 mục 6.3).
+
+### Nhóm API Công thức (`tests/recipe.test.js`) — 31/31
+
+#### `POST /it4788/recipe` — thêm công thức (10/10)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 369 | Không có token | 401 / `00006` | PASS |
+| 370 | Body rỗng | 400 / `00349` | PASS |
+| 371 | `foodName` rỗng | 400 / `00349` | PASS |
+| 372 | Tên công thức quá 200 ký tự | 400 / `00351` | PASS |
+| 373 | Mô tả quá 2000 ký tự | 400 / `00352` | PASS |
+| 374 | `htmlContent` sai kiểu | 400 / `00353` | PASS |
+| 375 | Người dùng chưa vào nhóm | 403 / `00096` | PASS |
+| 376 | Thực phẩm không tồn tại | 404 / `00354` | PASS |
+| 377 | Thực phẩm thuộc nhóm khác | 404 / `00354` | PASS |
+| 378 | Thành viên thường tạo hợp lệ | 201 / `00357`; lưu đúng `foodName`, mô tả, HTML | PASS |
+
+#### `GET /it4788/recipe` — danh sách công thức (7/7)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 379 | Không có token | 401 / `00006` | PASS |
+| 380 | Người dùng chưa vào nhóm | 403 / `00096` | PASS |
+| 381 | Lấy toàn bộ công thức của nhóm | 200 / `00378` | PASS |
+| 382 | `?foodName=` lọc theo tên món | 200 / `00378`; đúng công thức | PASS |
+| 383 | `?foodId=` lọc theo id món (đặc tả gốc) | 200 / `00378`; đúng công thức | PASS |
+| 384 | `foodId` sai định dạng / tên món không tồn tại | 200 / `00378`; mảng rỗng | PASS |
+| 385 | Không lộ công thức của nhóm khác | 200 / `00378`; chỉ công thức của nhóm | PASS |
+
+#### `PUT /it4788/recipe` — sửa công thức (10/10)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 386 | Thiếu `recipeId` | 400 / `00359` | PASS |
+| 387 | `recipeId` sai định dạng | 400 / `00359` | PASS |
+| 388 | Không có trường nào để cập nhật | 400 / `00360` | PASS |
+| 389 | `newFoodName` rỗng | 400 / `00361` | PASS |
+| 390 | `newDescription` rỗng | 400 / `00362` | PASS |
+| 391 | `newHtmlContent` rỗng | 400 / `00363` | PASS |
+| 392 | `newName` rỗng | 400 / `00364` | PASS |
+| 393 | Công thức không tồn tại | 404 / `00365` | PASS |
+| 394 | Thực phẩm mới không tồn tại | 404 / `00367` | PASS |
+| 395 | Cập nhật món, tên, mô tả và HTML | 200 / `00370`; dữ liệu đổi đúng | PASS |
+
+#### `DELETE /it4788/recipe` — xoá công thức (4/4)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| 396 | Thiếu `recipeId` | 400 / `00371` | PASS |
+| 397 | `recipeId` sai định dạng | 400 / `00372` | PASS |
+| 398 | Công thức không tồn tại | 404 / `00373` | PASS |
+| 399 | Xoá thành công | 200 / `00376`; trả lại dữ liệu vừa xoá | PASS |
+
+Ghi chú nhóm Công thức:
+
+- Quyền: mọi thành viên trong nhóm được thêm / sửa / xoá công thức (docs/01 mục 5); công thức của nhóm khác coi như không tồn tại (`00365`, `00373`).
+- Đặc tả gốc dùng `?foodId=` cho `GET /recipe`; nhóm hỗ trợ thêm `?foodName=` cho đồng nhất với các API thực phẩm khác ([tài liệu 02](02-GOP-Y-DAC-TA-API.md) mục 2.5). Không truyền tham số thì trả toàn bộ công thức của nhóm.
+- `htmlContent` được trả đầy đủ trong danh sách để màn hình chi tiết render trực tiếp bằng `react-native-render-html`.
 
 ## 4 vấn đề đã khắc phục
 

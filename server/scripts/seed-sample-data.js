@@ -7,6 +7,9 @@ const Group = require('../src/models/group.models');
 const Food = require('../src/models/food.models');
 const Category = require('../src/models/category.models');
 const Unit = require('../src/models/unit.models');
+const FridgeItem = require('../src/models/fridgeItem.models');
+const MealPlan = require('../src/models/mealPlan.models');
+const Recipe = require('../src/models/recipe.models');
 
 const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS) || 10;
 const SAMPLE_PASSWORD = 'Matkhau@123';
@@ -79,6 +82,7 @@ const SAMPLE_USERS = [
       { name: 'Thịt bò', image: null },
       { name: 'Ức gà', image: null },
     ];
+    const foods = [];
     for (const f of SAMPLE_FOODS) {
       const food = await Food.findOneAndUpdate(
         { groupId: group._id, name: f.name },
@@ -94,7 +98,91 @@ const SAMPLE_USERS = [
         },
         { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
       );
+      foods.push(food);
       console.log(`✓ Food: ${food.name} (_id: ${food._id})`);
+    }
+
+    // 5) Tủ lạnh: hai món còn hạn để API gợi ý món ăn có dữ liệu.
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expirySoon = new Date(today.getTime() + 2 * 24 * 60 * 60 * 1000);
+    const expiryLater = new Date(today.getTime() + 5 * 24 * 60 * 60 * 1000);
+
+    const SAMPLE_FRIDGE = [
+      { food: foods[0], quantity: 1, expiryDate: expirySoon, location: 'ngăn mát' },
+      { food: foods[1], quantity: 2, expiryDate: expiryLater, location: 'ngăn đá' },
+    ];
+    for (const item of SAMPLE_FRIDGE) {
+      const fridgeItem = await FridgeItem.findOneAndUpdate(
+        { groupId: group._id, foodId: item.food._id },
+        {
+          $set: {
+            groupId: group._id,
+            foodId: item.food._id,
+            quantity: item.quantity,
+            expiryDate: item.expiryDate,
+            location: item.location,
+            isNotified: false,
+          },
+        },
+        { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
+      );
+      console.log(`✓ FridgeItem: ${item.food.name} (hạn ${fridgeItem.expiryDate.toISOString().slice(0, 10)})`);
+    }
+
+    // 6) Kế hoạch bữa ăn hôm nay (sáng / trưa) — chỉ trưởng nhóm lập được qua API.
+    const SAMPLE_MEALS = [
+      { food: foods[0], name: 'sáng' },
+      { food: foods[1], name: 'trưa' },
+    ];
+    for (const meal of SAMPLE_MEALS) {
+      await MealPlan.findOneAndUpdate(
+        { groupId: group._id, foodId: meal.food._id, timestamp: today, name: meal.name },
+        {
+          $set: {
+            groupId: group._id,
+            foodId: meal.food._id,
+            timestamp: today,
+            name: meal.name,
+            createdBy: admin._id,
+          },
+        },
+        { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
+      );
+      console.log(`✓ MealPlan: ${meal.name} — ${meal.food.name}`);
+    }
+
+    // 7) Công thức nấu ăn cho hai món.
+    const SAMPLE_RECIPES = [
+      {
+        food: foods[0],
+        name: 'Bò xào rau củ',
+        description: 'Thịt bò xào nhanh với rau củ, phù hợp bữa tối.',
+        htmlContent: '<h3>Nguyên liệu</h3><ul><li>Thịt bò</li><li>Rau củ</li></ul><p>Xào trên lửa lớn trong 5 phút.</p>',
+      },
+      {
+        food: foods[1],
+        name: 'Ức gà áp chảo',
+        description: 'Ức gà áp chảo mềm, ít dầu mỡ.',
+        htmlContent: '<h3>Nguyên liệu</h3><ul><li>Ức gà</li></ul><p>Ướp 15 phút rồi áp chảo mỗi mặt 4 phút.</p>',
+      },
+    ];
+    for (const recipe of SAMPLE_RECIPES) {
+      await Recipe.findOneAndUpdate(
+        { groupId: group._id, foodId: recipe.food._id, name: recipe.name },
+        {
+          $set: {
+            groupId: group._id,
+            foodId: recipe.food._id,
+            name: recipe.name,
+            description: recipe.description,
+            htmlContent: recipe.htmlContent,
+            createdBy: admin._id,
+          },
+        },
+        { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
+      );
+      console.log(`✓ Recipe: ${recipe.name} (${recipe.food.name})`);
     }
 
     console.log('\n=== HOÀN TẤT ===');

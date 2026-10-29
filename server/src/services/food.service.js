@@ -6,6 +6,8 @@ const User = require('../models/user.models');
 const Group = require('../models/group.models');
 const FridgeItem = require('../models/fridgeItem.models');
 const Task = require('../models/task.models');
+const MealPlan = require('../models/mealPlan.models');
+const Recipe = require('../models/recipe.models');
 const RC = require('../constants/responseCode');
 const { fail } = require('../utils/response');
 const { toPublicFood } = require('../utils/serializers');
@@ -203,10 +205,12 @@ const deleteFood = async (userId, { foodName }) => {
   await food.populate(FOOD_POPULATE);
   const data = toPublicFood(food);
   await Food.deleteOne({ _id: food._id });
-  // Dọn mục tủ lạnh / món trong danh sách đi chợ tham chiếu tới thực phẩm
-  // vừa xoá để không còn bản ghi mồ côi.
+  // Dọn mục tủ lạnh / món trong danh sách đi chợ / kế hoạch bữa ăn / công thức
+  // tham chiếu tới thực phẩm vừa xoá để không còn bản ghi mồ côi.
   await FridgeItem.deleteMany({ foodId: food._id });
   await Task.deleteMany({ foodId: food._id });
+  await MealPlan.deleteMany({ foodId: food._id });
+  await Recipe.deleteMany({ foodId: food._id });
   return data;
 };
 

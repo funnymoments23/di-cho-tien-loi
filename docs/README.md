@@ -97,12 +97,24 @@ di-cho-tien-loi/
   - `DELETE /shopping/task` — xoá món theo `{ taskId }` (`00299`; thiếu `taskId` `00294`, không phải trưởng nhóm `00297`, không tìm thấy `00296`).
   - `PATCH /shopping/task/:taskId/complete` — API bổ sung đánh dấu đã mua với `{ isCompleted }` (`00312`; mọi thành viên trong nhóm đều tick được — [tài liệu 02](02-GOP-Y-DAC-TA-API.md) mục 3.5).
   - Nền tảng: model `ShoppingList` (`name`, `groupId`, `assignedTo`, `note`, `date`, `createdBy`) và `Task` (`listId`, `foodId`, `quantity`, `isCompleted`), unique `{ listId, foodId }`; serializer `toPublicShoppingList`/`toPublicTask`.
-- **Kiểm thử tự động**: 333 test (Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh + Đi chợ + rate limit), hiện **333/333 pass** — xem [báo cáo kiểm thử](test-report.md).
+- **Nhóm API Bữa ăn** (`routes/meal.route.js`, 5 endpoint) — lịch bữa ăn sáng/trưa/tối của nhóm; chỉ trưởng nhóm lập/sửa/xoá.
+  - `GET /meal` — lịch bữa ăn, lọc `?date=YYYY-MM-DD` hoặc `?from=&to=` (`00348`; chưa vào nhóm `00345`).
+  - `GET /meal/suggestion` — gợi ý món từ thực phẩm còn hạn trong tủ, ưu tiên món sắp hết hạn (API bổ sung, [tài liệu 02](02-GOP-Y-DAC-TA-API.md) mục 3.2).
+  - `POST /meal` — `{ foodName, timestamp, name }` (`00322`; thiếu trường `00313`, tên món/bữa sai `00314`/`00316`, ngày sai `00315`, thực phẩm không tồn tại `00317`, không phải trưởng nhóm `00319`).
+  - `PUT /meal` — `{ planId, newFoodName?, newTimestamp?, newName? }` (`00344`; thiếu `planId` `00332`, không có trường cập nhật `00333`, trường mới sai `00334`–`00336`, không tìm thấy `00337`, không phải trưởng nhóm `00339`, thực phẩm mới không tồn tại `00341`).
+  - `DELETE /meal` — `{ planId }` (`00330`; thiếu `planId` `00323`, sai định dạng `00324`, không tìm thấy `00325`, không phải trưởng nhóm `00327`).
+  - Nền tảng: model `MealPlan` (`groupId`, `foodId`, `timestamp`, `name`), index `{ groupId, timestamp }`; tên bữa được chuẩn hoá về `sáng`/`trưa`/`tối`.
+- **Nhóm API Công thức** (`routes/recipe.route.js`, 4 endpoint) — công thức nấu ăn gắn với thực phẩm của nhóm; mọi thành viên quản lý.
+  - `GET /recipe` — danh sách công thức, lọc `?foodId=` (đặc tả) hoặc `?foodName=` (`00378`; chưa vào nhóm `00096`).
+  - `POST /recipe` — `{ foodName, name, description, htmlContent }` (`00357`; thiếu trường `00349`, tên/mô tả/HTML sai `00351`–`00353`, thực phẩm không tồn tại `00354`).
+  - `PUT /recipe` — `{ recipeId, newFoodName?, newName?, newDescription?, newHtmlContent? }` (`00370`; thiếu `recipeId` `00359`, không có trường cập nhật `00360`, trường mới sai `00361`–`00364`, không tìm thấy `00365`, thực phẩm mới không tồn tại `00367`).
+  - `DELETE /recipe` — `{ recipeId }` (`00376`; thiếu `recipeId` `00371`, sai định dạng `00372`, không tìm thấy `00373`).
+  - Nền tảng: model `Recipe` (`foodId`, `groupId`, `name`, `description`, `htmlContent`), serializer `toPublicRecipe`; xoá thực phẩm hoặc xoá nhóm cũng dọn kế hoạch bữa ăn / công thức liên quan.
+- **Kiểm thử tự động**: 399 test (Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + rate limit), hiện **399/399 pass** — xem [báo cáo kiểm thử](test-report.md).
 
 ### Chưa làm
 
-- Các model còn lại (MealPlan, Recipe...), routes/controllers cho các nhóm API còn lại (Bữa ăn, Công thức) và các API thống kê `GET /report/*`.
-- API quên mật khẩu và các API bổ sung khác.
+- Các API thống kê `GET /report/*` và API quên mật khẩu.
 - Upload ảnh (đại diện, thực phẩm) hiện lưu trên đĩa server (`server/uploads/`, đã gitignore); khi deploy cần chuyển sang Cloudinary để không mất ảnh.
 - Ứng dụng mobile và trang admin.
 
@@ -119,7 +131,7 @@ npm run dev     # http://localhost:5000/it4788/health
 
 ```bash
 cd server
-npm test        # 333 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh + Đi chợ + rate limit, dùng MongoDB in-memory, không cần .env
+npm test        # 399 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + rate limit, dùng MongoDB in-memory, không cần .env
 ```
 
 ## Tài liệu
@@ -128,7 +140,7 @@ npm test        # 333 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn 
 |---|---|
 | [01 – Kế hoạch & Kiến trúc](01-KE-HOACH-KIEN-TRUC.md) | Kiến trúc hệ thống, thiết kế database, cấu trúc thư mục, danh sách màn hình, lộ trình 8 tuần, phân công |
 | [02 – Rà soát đặc tả API](02-GOP-Y-DAC-TA-API.md) | 16 lỗi phát hiện trong mô tả API của đề và đề xuất sửa đổi (phần tính điểm cộng) |
-| [Báo cáo kiểm thử](test-report.md) | 333 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh + Đi chợ: ma trận case, kết quả, phát hiện và cách chạy |
+| [Báo cáo kiểm thử](test-report.md) | 399 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức: ma trận case, kết quả, phát hiện và cách chạy |
 
 ## Bắt đầu
 

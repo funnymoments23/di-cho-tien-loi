@@ -13,7 +13,6 @@ app.use(express.urlencoded({ extended: true }));
 // Ảnh đại diện upload lên được phục vụ tĩnh (xem middlewares/upload.middleware.js)
 app.use('/it4788/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
-
 // Tất cả API nằm dưới prefix /it4788
 app.get('/it4788/health', (req, res) => {
   sendSuccess(res, RC.HEALTH_OK);
