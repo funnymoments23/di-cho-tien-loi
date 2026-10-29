@@ -21,13 +21,14 @@ const auth = async (req, res, next) => {
     const payload = verifyAccessToken(token); // ném AppError nếu hỏng
     if (!mongoose.isValidObjectId(payload.sub)) return next(fail(RC.TOKEN_INVALID));
 
-    const user = await User.findById(payload.sub).select('role isActive');
+    const user = await User.findById(payload.sub).select('role isActive groupId');
     if (!user) return next(fail(RC.USER_NOT_FOUND)); // 00052
     if (user.isActive === false) return next(fail(RC.ACCOUNT_LOCKED)); // 00403
 
     req.user = {
       id: payload.sub,
       role: user.role || 'user',
+      groupId: user.groupId || null,
     };
     next();
   } catch (err) {

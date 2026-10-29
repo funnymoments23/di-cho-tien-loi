@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const {notFound, errorHandler} = require('./middlewares/error.middleware')
+const auditLog = require('./middlewares/audit.middleware');
 const RC = require('./constants/responseCode');
 const {sendSuccess} = require('./utils/response');
 const app = express();
@@ -9,6 +10,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Ghi nhật ký các thao tác ghi/sửa/xoá thành công trước khi vào router.
+app.use(auditLog);
 
 // Ảnh mới nằm trên Cloudinary; route này chỉ còn phục vụ ảnh cũ lưu trên đĩa
 // trước khi chuyển sang Cloudinary (xem middlewares/upload.middleware.js).

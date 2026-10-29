@@ -136,7 +136,12 @@ di-cho-tien-loi/
   - Multer giữ ảnh trong RAM (tối đa 5MB, chỉ nhận `image/*`) rồi đẩy lên bằng `upload_stream`; không ghi xuống đĩa nên deploy lại không mất ảnh.
   - Ảnh đại diện được crop vuông 500×500 (ưu tiên khuôn mặt), ảnh thực phẩm giới hạn chiều rộng 1000px.
   - Cấu hình `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLOUDINARY_FOLDER` trong `.env`.
-- **Kiểm thử tự động**: 487 test (Auth + Quên mật khẩu + Tài khoản + Nhóm + Danh mục + Đơn vị + Quản trị người dùng + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + rate limit + cron/push), hiện **487/487 pass** — xem [báo cáo kiểm thử](test-report.md).
+- **Nhật ký hệ thống** (`models/log.models.js`, `middlewares/audit.middleware.js`, `utils/logger.js`) — admin xem lại các thao tác ghi/sửa/xoá (đề mục B.7).
+  - `GET /admin/logs` — lọc `action`, `entity`, `userId`, `groupId`, `from`, `to`; phân trang `page` / `limit` (tối đa 100), mới nhất trước (`00109`; query sai `00405`, khoảng ngày sai `00406`).
+  - Audit middleware tự ghi log sau mỗi request `POST` / `PUT` / `PATCH` / `DELETE` thành công: `action` (`CREATE` / `UPDATE` / `DELETE`), `entity`, `entityId`, `userId`, `groupId`, `detail`. Không ghi GET, request lỗi, đăng nhập/đăng ký, logout hay cập nhật device token.
+  - Ghi log không làm hỏng nghiệp vụ chính: lỗi ghi log chỉ in cảnh báo, response vẫn thành công.
+- **Tạo tài khoản admin** (`scripts/seed-admin.js`) — `npm run seed:admin` tạo mới hoặc nâng quyền tài khoản theo `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME`, `ADMIN_USERNAME` trong `.env`; tài khoản đã có được giữ `groupId`/`deviceToken` và được mở khoá, đặt lại mật khẩu, gán `role = admin`.
+- **Kiểm thử tự động**: 509 test (Auth + Quên mật khẩu + Tài khoản + Nhóm + Danh mục + Đơn vị + Quản trị người dùng + Nhật ký + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + rate limit + cron/push + seed admin), hiện **509/509 pass** — xem [báo cáo kiểm thử](test-report.md).
 
 ### Chưa làm
 
@@ -148,14 +153,15 @@ di-cho-tien-loi/
 cd server
 npm install
 # tạo server/.env gồm PORT, MONGODB_URI và CLOUDINARY_* (xem .env.example)
-npm run dev     # http://localhost:5000/it4788/health
+npm run seed:admin   # tạo / nâng quyền tài khoản admin theo ADMIN_* trong .env
+npm run dev          # http://localhost:5000/it4788/health
 ```
 
 ### Chạy test
 
 ```bash
 cd server
-npm test        # 487 test API Auth + Quên mật khẩu + Tài khoản + Nhóm + Danh mục + Đơn vị + Quản trị người dùng + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + rate limit + cron/push, dùng MongoDB in-memory, không cần .env
+npm test        # 509 test API Auth + Quên mật khẩu + Tài khoản + Nhóm + Danh mục + Đơn vị + Quản trị người dùng + Nhật ký + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + rate limit + cron/push + seed admin, dùng MongoDB in-memory, không cần .env
 ```
 
 ## Tài liệu
@@ -164,7 +170,7 @@ npm test        # 487 test API Auth + Quên mật khẩu + Tài khoản + Nhóm 
 |---|---|
 | [01 – Kế hoạch & Kiến trúc](01-KE-HOACH-KIEN-TRUC.md) | Kiến trúc hệ thống, thiết kế database, cấu trúc thư mục, danh sách màn hình, lộ trình 8 tuần, phân công |
 | [02 – Rà soát đặc tả API](02-GOP-Y-DAC-TA-API.md) | 17 lỗi phát hiện trong mô tả API của đề và đề xuất sửa đổi (phần tính điểm cộng) |
-| [Báo cáo kiểm thử](test-report.md) | 487 test API Auth + Quên mật khẩu + Tài khoản + Nhóm + Danh mục + Đơn vị + Quản trị người dùng + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + cron/push: ma trận case, kết quả, phát hiện và cách chạy |
+| [Báo cáo kiểm thử](test-report.md) | 509 test API Auth + Quên mật khẩu + Tài khoản + Nhóm + Danh mục + Đơn vị + Quản trị người dùng + Nhật ký + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + cron/push + seed admin: ma trận case, kết quả, phát hiện và cách chạy |
 
 ## Bắt đầu
 

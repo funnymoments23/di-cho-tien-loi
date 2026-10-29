@@ -10,7 +10,8 @@
     "test": "jest --runInBand",
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "expiry:check": "node scripts/run-expiry-check.js"
+    "expiry:check": "node scripts/run-expiry-check.js",
+    "seed:admin": "node scripts/seed-admin.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

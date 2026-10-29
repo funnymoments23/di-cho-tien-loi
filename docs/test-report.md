@@ -4,7 +4,7 @@
 - **Phạm vi:** 6 endpoint Auth + 2 endpoint Quên mật khẩu + 5 endpoint Tài khoản + 6 endpoint Nhóm + 4 endpoint Danh mục + 4 endpoint Đơn vị + 5 endpoint Quản trị người dùng + 5 endpoint Thực phẩm + 5 endpoint Tủ lạnh + 8 endpoint Đi chợ + 5 endpoint Bữa ăn + 4 endpoint Công thức + 5 endpoint Báo cáo (`server/src/routes/user.route.js`, `group.route.js`, `admin.route.js`, `food.route.js`, `fridge.route.js`, `shopping.route.js`, `meal.route.js`, `recipe.route.js`, `report.route.js`) + endpoint health + rate limit
 - **Công cụ:** Jest 30.5.2, Supertest 7.3.1, mongodb-memory-server 11.3.0
 - **Môi trường:** Windows, Node.js v24.11.0, MongoDB in-memory 8.2.6
-- **Kết quả:** **487/487 test PASS**, 16 test suite, ~89 giây (sau khi binary Mongo đã tải sẵn)
+- **Kết quả:** **509/509 test PASS**, 18 test suite, ~47 giây (sau khi binary Mongo đã tải sẵn)
 
 ## Cách chạy
 
@@ -23,6 +23,8 @@ Cấu hình: [`server/jest.config.js`](../server/jest.config.js), biến môi tr
 [`server/tests/category.test.js`](../server/tests/category.test.js),
 [`server/tests/unit.test.js`](../server/tests/unit.test.js),
 [`server/tests/admin-user.test.js`](../server/tests/admin-user.test.js),
+[`server/tests/logs.test.js`](../server/tests/logs.test.js),
+[`server/tests/seed-admin.test.js`](../server/tests/seed-admin.test.js),
 [`server/tests/food.test.js`](../server/tests/food.test.js),
 [`server/tests/fridge.test.js`](../server/tests/fridge.test.js),
 [`server/tests/shopping.test.js`](../server/tests/shopping.test.js),
@@ -1015,6 +1017,38 @@ Ghi chú nhóm Quản trị người dùng:
 - Khoá tài khoản thu hồi `refreshToken`; đổi `role` cũng thu hồi để buộc đăng nhập lại.
 - `DELETE /admin/user/:id` dùng chung `detachUserFromGroup`: xoá trưởng nhóm thì chuyển quyền cho thành viên lâu năm nhất, người cuối cùng thì xoá cả nhóm và dữ liệu liên quan.
 - Chặn admin tự hạ quyền / tự khoá / tự xoá để không mất quyền quản trị ngoài ý muốn. Chưa chặn trường hợp admin hạ quyền admin cuối cùng của hệ thống (xem "Còn tồn tại").
+
+### Nhóm API Nhật ký hệ thống (`tests/logs.test.js`) — 13/13
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| L1 | Admin xem log sau khi sửa hồ sơ | 200 / `00109`; `action=UPDATE`, `entity=user`, đúng `entityId`, user/group được populate | PASS |
+| L2 | Người dùng thường gọi `GET /admin/logs` | 403 / `00017` | PASS |
+| L3 | Không có token | 401 / `00006` | PASS |
+| L4 | GET, request lỗi, đăng nhập thất bại | Không sinh log | PASS |
+| L5 | Tạo nhóm | Log `CREATE group`, `entityId` và `groupId` là nhóm mới | PASS |
+| L6 | Thêm thành viên | Log `UPDATE group`, không phải `CREATE` | PASS |
+| L7 | Admin tạo danh mục | Log `CREATE category`, `group=null` | PASS |
+| L8 | Lọc `action` + `entity` | Chỉ trả bản ghi khớp | PASS |
+| L9 | Lọc `userId` / `groupId` | Đúng số bản ghi của người dùng / nhóm | PASS |
+| L10 | Lọc khoảng ngày giờ Việt Nam | Ngày hôm nay khớp; khoảng năm 2000 không khớp | PASS |
+| L11 | Phân trang `limit` / `page` | `total`, `totalPages` và thứ tự mới nhất đúng | PASS |
+| L12 | Query sai (`action`, `userId`, `page`, `limit`) | 400 / `00405` | PASS |
+| L13 | Ngày không tồn tại hoặc `from > to` | 400 / `00406` | PASS |
+
+### Script tạo admin (`tests/seed-admin.test.js`) — 9/9
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| S1 | Tạo admin mới | `role=admin`, `isVerified=true`, `isActive=true`, mật khẩu băm | PASS |
+| S2 | Không truyền username | Dùng username mặc định `admin` | PASS |
+| S3 | Nâng quyền user đã có | Giữ `_id`, `username`, `groupId`; mở khoá; đổi mật khẩu | PASS |
+| S4 | Truyền username mới | Cập nhật username và nâng quyền | PASS |
+| S5 | Chạy lại cùng email | Không tạo trùng tài khoản | PASS |
+| S6 | Username thuộc tài khoản khác | Báo lỗi, không tạo admin mới | PASS |
+| S7 | Thiếu/sai email, thiếu/sai mật khẩu | Báo lỗi rõ ràng | PASS |
+| S8 | Tên/username sai độ dài | Báo lỗi rõ ràng | PASS |
+| S9 | Chuẩn hoá input | Email chữ thường, trim tên/username | PASS |
 
 ## 4 vấn đề đã khắc phục
 

@@ -425,6 +425,19 @@ const RESPONSE_CODE = Object.freeze({
     ),
     // 00403: chặn đăng nhập / dùng token khi tài khoản bị admin khoá.
     ACCOUNT_LOCKED: def('00403', FORBIDDEN, 'Tài khoản của bạn đã bị khoá. Vui lòng liên hệ quản trị viên.'),
+
+    // ===== Nhật ký hệ thống (admin/logs) =====
+    // 00109 (LOGS_GET_SUCCESS) đã có sẵn theo đặc tả; bổ sung mã lỗi query.
+    LOGS_INVALID_QUERY: def(
+      '00405',
+      BAD_REQUEST,
+      'Tham số truy vấn nhật ký không hợp lệ. Vui lòng kiểm tra action, entity, userId, groupId, from, to, page, limit.'
+    ),
+    LOGS_INVALID_DATE_RANGE: def(
+      '00406',
+      BAD_REQUEST,
+      'Khoảng thời gian không hợp lệ. Vui lòng cung cấp ngày dạng YYYY-MM-DD và from <= to.'
+    ),
 });
 
 module.exports = RESPONSE_CODE;

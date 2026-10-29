@@ -197,16 +197,30 @@ Do **admin hệ thống** quản lý. Trường: `name` (String, unique).
 | `description` | String | mô tả ngắn |
 | `htmlContent` | String | nội dung chi tiết dạng HTML, app render bằng `react-native-render-html` |
 
+#### `fridgeevents` — lịch sử mục rời khỏi tủ lạnh (nguồn báo cáo tiêu thụ / lãng phí)
+
+| Trường | Kiểu | Ghi chú |
+|---|---|---|
+| `groupId` | ObjectId → groups | nhóm sở hữu |
+| `foodId` | ObjectId → foods | có thể null nếu thực phẩm đã bị xoá |
+| `foodName`, `categoryName`, `unitName` | String | lưu lại tại thời điểm xoá để báo cáo không phụ thuộc dữ liệu hiện tại |
+| `quantity` | Number | số lượng tại thời điểm xoá |
+| `expiryDate` | Date | hạn sử dụng tại thời điểm xoá |
+| `location` | String | vị trí trong tủ |
+| `action` | String | `consumed` / `expired` / `discarded` |
+| `actedBy` | ObjectId → users | người thực hiện |
+| `createdAt` | Date | thời điểm ghi |
+
 #### `logs` — nhật ký hệ thống (phục vụ `Get logs` và mục thống kê)
 
 | Trường | Kiểu |
 |---|---|
-| `userId` | ObjectId → users |
-| `groupId` | ObjectId → groups |
+| `userId` | ObjectId → users (có thể null nếu tài khoản đã bị xoá) |
+| `groupId` | ObjectId → groups (có thể null với thao tác quản trị hệ thống) |
 | `action` | String — `CREATE` / `UPDATE` / `DELETE` |
-| `entity` | String — `food` / `fridge` / `shopping`… |
+| `entity` | String — `user` / `group` / `food` / `fridge` / `shopping` / `task` / `meal` / `recipe` / `category` / `unit` |
 | `entityId` | ObjectId |
-| `detail` | String |
+| `detail` | String — mô tả ngắn, không chứa dữ liệu nhạy cảm |
 | `createdAt` | Date |
 
 ### 2.3 Index cần tạo (tránh chậm khi dữ liệu nhiều)
@@ -215,9 +229,11 @@ Do **admin hệ thống** quản lý. Trường: `name` (String, unique).
 users:        { email: 1 } unique, { username: 1 } unique
 foods:        { groupId: 1, name: 1 } unique
 fridgeitems:  { groupId: 1, foodId: 1 } unique, { expiryDate: 1 }
-tasks:        { listId: 1, foodId: 1 } unique
+fridgeevents: { groupId: 1, createdAt: -1 }, { groupId: 1, action: 1, createdAt: -1 }
+tasks:        { listId: 1, foodId: 1 } unique, { completedAt: 1 }
 mealplans:    { groupId: 1, timestamp: 1 }
-logs:         { groupId: 1, createdAt: -1 }
+logs:         { groupId: 1, createdAt: -1 }, { userId: 1, createdAt: -1 },
+              { action: 1, entity: 1, createdAt: -1 }, { entity: 1, createdAt: -1 }
 ```
 
 ---
@@ -292,7 +308,7 @@ server/
 │   │   └── env.js                # đọc và kiểm tra biến môi trường
 │   ├── constants/
 │   │   └── responseCode.js       # TOÀN BỘ mã 00005–00378 của đề
-│   ├── models/                   # 10 schema Mongoose (mục 2.2)
+│   ├── models/                   # 12 schema Mongoose (mục 2.2)
 │   ├── routes/
 │   │   ├── index.js              # gom router, gắn prefix /it4788
 │   │   ├── user.route.js
@@ -464,7 +480,7 @@ sequenceDiagram
 | Tuần | Mục tiêu | Sản phẩm bàn giao |
 |---|---|---|
 | **1** | Chuẩn bị & thiết kế | Chốt kiến trúc, dựng repo, tạo MongoDB Atlas, vẽ ERD, thiết kế giao diện trên Figma |
-| **2** | Nền móng backend | Kết nối DB, 10 model, file `responseCode`, middleware auth/error, nhóm API Auth chạy được trên Postman |
+| **2** | Nền móng backend | Kết nối DB, 12 model, file `responseCode`, middleware auth/error, nhóm API Auth chạy được trên Postman |
 | **3** | Backend nghiệp vụ 1 | API Nhóm, Danh mục, Đơn vị, Thực phẩm (có upload ảnh Cloudinary) |
 | **4** | Backend nghiệp vụ 2 | API Tủ lạnh, Đi chợ, Bữa ăn, Công thức. **Deploy bản đầu lên Render** |
 | **5** | App — khung & auth | Dựng Expo, điều hướng, màn hình Đăng nhập/Đăng ký/Xác minh, interceptor refresh token |

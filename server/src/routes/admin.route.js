@@ -5,6 +5,7 @@ const validate = require('../middlewares/validate.middleware');
 const categoryController = require('../controllers/category.controller');
 const unitController = require('../controllers/unit.controller');
 const adminUserController = require('../controllers/adminUser.controller');
+const logController = require('../controllers/log.controller');
 const {
   createCategorySchema,
   updateCategorySchema,
@@ -78,6 +79,11 @@ router.delete(
   validate(deleteUnitSchema, { fallback: RC.UNIT_DELETE_MISSING_NAME }), // 00123
   unitController.deleteUnit
 ); // 00128
+
+// ===== Nhật ký hệ thống (admin/logs) =====
+// Nhóm API B.7: admin xem nhật ký các thao tác ghi/sửa/xoá của toàn hệ thống.
+// Log được ghi tự động bởi middlewares/audit.middleware.js.
+router.get('/logs', auth, admin(), logController.getLogs); // 00109
 
 // ===== Nhóm Quản trị người dùng (admin/user) =====
 // Đề yêu cầu admin "quản lý tài khoản người dùng" nhưng đặc tả API gốc không có
