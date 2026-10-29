@@ -1,8 +1,6 @@
 const request = require('supertest');
 const mongoose = require('mongoose');
 const os = require('os');
-const fs = require('fs');
-const path = require('path');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 
 // Không gửi email thật: mock utils/email và lấy mã xác minh từ mock.calls.
@@ -10,11 +8,19 @@ jest.mock('../src/utils/email', () => ({
   sendVerificationCode: jest.fn(async () => ({ delivered: false, devCode: null })),
 }));
 
+// Không gọi Cloudinary thật khi test: trả về URL giả cố định.
+jest.mock('../src/config/cloudinary', () => ({
+  isConfigured: () => true,
+  uploadBuffer: jest.fn(async () => ({
+    secure_url: 'https://res.cloudinary.com/demo/image/upload/v1/avatars/avatar-test.png',
+    public_id: 'avatars/avatar-test',
+  })),
+}));
+
 const app = require('../src/app');
 const User = require('../src/models/user.models');
 const emailUtil = require('../src/utils/email');
 const RC = require('../src/constants/responseCode');
-const { AVATAR_DIR } = require('../src/middlewares/upload.middleware');
 
 const BASE = '/it4788/user';
 
@@ -233,11 +239,7 @@ describe(`PUT ${BASE} — sửa hồ sơ`, () => {
 
     expect(res.status).toBe(200);
     expect(res.body.code).toBe(RC.EDIT_USER_SUCCESS.code);
-    expect(res.body.data.avatar).toMatch(/^\/it4788\/uploads\/avatars\/.+\.png$/);
-
-    const savedPath = path.join(AVATAR_DIR, path.basename(res.body.data.avatar));
-    expect(fs.existsSync(savedPath)).toBe(true);
-    fs.unlinkSync(savedPath); // dọn file test
+    expect(res.body.data.avatar).toMatch(/^https:\/\/res\.cloudinary\.com\/.+\.png$/);
   });
 
   it('00158 khi tệp tải lên không phải ảnh', async () => {

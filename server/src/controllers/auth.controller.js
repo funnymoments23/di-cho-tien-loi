@@ -59,4 +59,31 @@ const logout = async (req, res, next) => {
   }
 };
 
-module.exports = { register, sendVerificationCode, verifyEmail, login, refresh, logout };
+const forgotPassword = async (req, res, next) => {
+  try {
+    const data = await authService.forgotPassword(req.body);
+    sendSuccess(res, RC.SEND_CODE_SUCCESS, data); // 00048
+  } catch (err) {
+    next(err);
+  }
+};
+
+const resetPassword = async (req, res, next) => {
+  try {
+    await authService.resetPassword(req.body);
+    sendSuccess(res, RC.NEW_PASSWORD_SUCCESS); // 00068
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  register,
+  sendVerificationCode,
+  verifyEmail,
+  login,
+  refresh,
+  logout,
+  forgotPassword,
+  resetPassword,
+};

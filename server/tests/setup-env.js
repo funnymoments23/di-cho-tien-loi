@@ -5,8 +5,13 @@ process.env.NODE_ENV = 'test';
 process.env.JWT_ACCESS_SECRET = 'test-access-secret';
 process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
 process.env.JWT_VERIFY_SECRET = 'test-verify-secret';
+process.env.JWT_RESET_SECRET = 'test-reset-secret';
 // bcrypt 4 vòng cho nhanh; logic không đổi.
 process.env.BCRYPT_ROUNDS = '4';
 process.env.VERIFICATION_CODE_TTL_MINUTES = '10';
 // Tắt rate limit cho bộ test chức năng; test riêng ở tests/rate-limit.test.js.
 process.env.AUTH_RATE_LIMIT_MAX = '0';
+// Cloudinary: test mock module src/config/cloudinary, các biến này chỉ để đủ cấu hình.
+process.env.CLOUDINARY_CLOUD_NAME = 'test-cloud';
+process.env.CLOUDINARY_API_KEY = 'test-key';
+process.env.CLOUDINARY_API_SECRET = 'test-secret';

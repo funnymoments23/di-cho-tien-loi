@@ -76,7 +76,13 @@ const RESPONSE_CODE = Object.freeze({
 
     // ===== Mật khẩu =====
     NEW_PASSWORD_INVALID: def('00066', BAD_REQUEST, 'Vui lòng cung cấp một mật khẩu dài hơn 6 và ngắn hơn 20 ký tự.'),
+    // Đặc tả không có mã riêng cho mã đặt lại mật khẩu sai/hết hạn; 00067 là số còn trống
+    // trong dải mã mật khẩu (00066–00076) nên dùng cho trường hợp này.
+    RESET_PASSWORD_CODE_INVALID: def('00067', BAD_REQUEST, 'Mã đặt lại mật khẩu không đúng hoặc đã hết hạn. Vui lòng yêu cầu mã mới.'),
     NEW_PASSWORD_SUCCESS: def('00068', OK, 'Mật khẩu mới đã được tạo thành công.'),
+    // Token đặt lại mật khẩu dùng chung mã 00055 với token xác minh email
+    // (đặc tả chỉ có một mã "token không hợp lệ"), nhưng message nói rõ ngữ cảnh.
+    RESET_PASSWORD_TOKEN_INVALID: def('00055', UNAUTHORIZED, 'Token đặt lại mật khẩu không hợp lệ. Token có thể đã hết hạn.'),
     CHANGE_PASSWORD_INVALID_FORMAT: def('00069', BAD_REQUEST, 'Vui lòng cung cấp mật khẩu cũ và mới dài hơn 6 ký tự và ngắn hơn 20 ký tự.'),
     OLD_PASSWORD_MISMATCH: def('00072', BAD_REQUEST, 'Mật khẩu cũ của bạn không khớp với mật khẩu bạn nhập, vui lòng nhập mật khẩu đúng.'),
     NEW_PASSWORD_SAME_AS_OLD: def('00073', BAD_REQUEST, 'Mật khẩu mới của bạn không nên giống với mật khẩu cũ, vui lòng thử một mật khẩu khác.'),

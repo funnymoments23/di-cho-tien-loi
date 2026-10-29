@@ -14,6 +14,8 @@ const userSchema = new mongoose.Schema({
   isVerified:  { type: Boolean, default: false },
   verificationCode:          { type: String, select: false },
   verificationCodeExpiresAt: { type: Date,   select: false },
+  passwordResetCode:          { type: String, select: false },
+  passwordResetCodeExpiresAt: { type: Date,   select: false },
   refreshToken: { type: String, select: false },
   role:    { type: String, enum: ['user', 'admin'], default: 'user' },
   groupId: { type: mongoose.Schema.Types.ObjectId, ref: 'Group', default: null },

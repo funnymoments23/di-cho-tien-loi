@@ -8,13 +8,20 @@ const ISSUER = 'di-cho-tien-loi';
 const ACCESS_EXPIRES_IN = process.env.JWT_ACCESS_EXPIRES_IN || '1h';
 const REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
 const VERIFY_EXPIRES_IN = process.env.JWT_VERIFY_EXPIRES_IN || '10m';
+const RESET_EXPIRES_IN = process.env.JWT_RESET_EXPIRES_IN || '10m';
 
-const TOKEN_TYPE = Object.freeze({ ACCESS: 'access', REFRESH: 'refresh', VERIFY: 'verify' });
+const TOKEN_TYPE = Object.freeze({
+  ACCESS: 'access',
+  REFRESH: 'refresh',
+  VERIFY: 'verify',
+  RESET: 'reset',
+});
 
 const SECRET_ENV_NAME = {
   [TOKEN_TYPE.ACCESS]: 'JWT_ACCESS_SECRET',
   [TOKEN_TYPE.REFRESH]: 'JWT_REFRESH_SECRET',
   [TOKEN_TYPE.VERIFY]: 'JWT_VERIFY_SECRET',
+  [TOKEN_TYPE.RESET]: 'JWT_RESET_SECRET',
 };
 
 // Đọc secret lần đầu dùng, thiếu thì báo lỗi rõ ràng thay vì ký bằng "undefined".
@@ -22,11 +29,14 @@ const secretCache = {};
 const secretFor = (type) => {
   if (!secretCache[type]) {
     const envName = SECRET_ENV_NAME[type];
-    // Token xác minh email chỉ sống 10 phút; nếu không cấu hình riêng thì dùng
-    // chung secret với access token (payload có `typ` nên không thể dùng lẫn).
+    // Token xác minh email / đặt lại mật khẩu chỉ sống 10 phút; nếu không cấu hình
+    // riêng thì dùng chung secret với access token (payload có `typ` nên không thể
+    // dùng lẫn).
     const value =
       process.env[envName] ||
-      (type === TOKEN_TYPE.VERIFY ? process.env.JWT_ACCESS_SECRET : undefined);
+      (type === TOKEN_TYPE.VERIFY || type === TOKEN_TYPE.RESET
+        ? process.env.JWT_ACCESS_SECRET
+        : undefined);
     if (!value) {
       throw new Error(`Thiếu biến môi trường ${envName} trong file .env`);
     }
@@ -68,6 +78,13 @@ const signRefreshToken = (user) =>
 const signVerificationToken = (user) =>
   signToken({ sub: userIdOf(user) }, TOKEN_TYPE.VERIFY, VERIFY_EXPIRES_IN);
 
+/**
+ * Token đặt lại mật khẩu: trả về ở POST /user/forgot-password, sống 10 phút.
+ * Chỉ dùng cho POST /user/reset-password; không thay được access token.
+ */
+const signPasswordResetToken = (user) =>
+  signToken({ sub: userIdOf(user) }, TOKEN_TYPE.RESET, RESET_EXPIRES_IN);
+
 const generateTokenPair = (user) => ({
   accessToken: signAccessToken(user),
   refreshToken: signRefreshToken(user),
@@ -77,6 +94,7 @@ const generateTokenPair = (user) => ({
 const invalidCodeFor = (type) => {
   if (type === TOKEN_TYPE.REFRESH) return RC.REFRESH_TOKEN_UNVERIFIABLE;
   if (type === TOKEN_TYPE.VERIFY) return RC.VERIFY_TOKEN_INVALID;
+  if (type === TOKEN_TYPE.RESET) return RC.RESET_PASSWORD_TOKEN_INVALID;
   return RC.TOKEN_INVALID;
 };
 
@@ -91,6 +109,9 @@ const verifyToken = (token, type) => {
       }
       if (type === TOKEN_TYPE.VERIFY) {
         throw fail(RC.VERIFY_TOKEN_INVALID);
+      }
+      if (type === TOKEN_TYPE.RESET) {
+        throw fail(RC.RESET_PASSWORD_TOKEN_INVALID);
       }
       throw fail(RC.SESSION_EXPIRED);
     }
@@ -108,6 +129,7 @@ const verifyToken = (token, type) => {
 const verifyAccessToken = (token) => verifyToken(token, TOKEN_TYPE.ACCESS);
 const verifyRefreshToken = (token) => verifyToken(token, TOKEN_TYPE.REFRESH);
 const verifyVerificationToken = (token) => verifyToken(token, TOKEN_TYPE.VERIFY);
+const verifyPasswordResetToken = (token) => verifyToken(token, TOKEN_TYPE.RESET);
 
 // ===== Tiện ích =====
 /** Lấy token từ header "Authorization: Bearer xxx". Trả null nếu không có/ sai định dạng. */
@@ -135,10 +157,12 @@ module.exports = {
   signAccessToken,
   signRefreshToken,
   signVerificationToken,
+  signPasswordResetToken,
   generateTokenPair,
   verifyAccessToken,
   verifyRefreshToken,
   verifyVerificationToken,
+  verifyPasswordResetToken,
   extractBearerToken,
   hashToken,
   safeCompare,

@@ -11,6 +11,8 @@ const {
   refreshTokenSchema,
   verifyEmailSchema,
   sendVerificationCodeSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 } = require('../validations/auth.validation');
 const {
   updateUserSchema,
@@ -133,6 +135,38 @@ router.put(
   auth,
   validate(deviceTokenSchema, { fallback: RC.REGISTER_MISSING_FIELDS }), // 00025
   userController.updateDeviceToken
+);
+
+// ===== Quên mật khẩu (chưa đăng nhập được, xem docs/02 mục 3.7) =====
+
+// POST /user/forgot-password — gửi mã đặt lại mật khẩu qua email (00048)
+router.post(
+  '/forgot-password',
+  authRateLimiter,
+  validate(forgotPasswordSchema, {
+    byField: { email: RC.REGISTER_INVALID_EMAIL }, // 00026
+    fallback: RC.SEND_CODE_MISSING_FIELDS,         // 00005
+  }),
+  authController.forgotPassword
+);
+
+// POST /user/reset-password — nhập mã + token để đặt mật khẩu mới (00068)
+router.post(
+  '/reset-password',
+  authRateLimiter,
+  validate(resetPasswordSchema, {
+    byField: {
+      code: RC.RESET_PASSWORD_CODE_INVALID,          // 00067
+      token: RC.RESET_PASSWORD_TOKEN_INVALID,        // 00055
+      newPassword: RC.NEW_PASSWORD_INVALID,          // 00066
+    },
+    missingByField: {
+      // Thiếu token là lỗi token, không phải "thiếu mã xác nhận" (00053).
+      token: RC.RESET_PASSWORD_TOKEN_INVALID,        // 00055
+    },
+    fallback: RC.VERIFY_CODE_MISSING,                // 00053
+  }),
+  authController.resetPassword
 );
 
 module.exports = router;

@@ -37,16 +37,18 @@ di-cho-tien-loi/
   - `utils/response.js` (`sendSuccess`, `fail`) và `utils/AppError.js`.
   - `middlewares/error.middleware.js`: xử lý 404 và lỗi tập trung (kể cả JSON sai định dạng).
 - Model `User` ([user.models.js](../server/src/models/user.models.js)): email, mật khẩu, tên, username, avatar, giới tính, ngày sinh, ngôn ngữ, múi giờ, device token, xác minh email, refresh token, role (`user`/`admin`), `groupId`.
-- **Nhóm API Auth** (`routes/user.route.js`): 6 endpoint chạy được trên Postman.
+- **Nhóm API Auth** (`routes/user.route.js`): 8 endpoint chạy được trên Postman.
   - `POST /it4788/user` — đăng ký, gửi mã 6 số qua email (`00035`).
   - `POST /it4788/user/verify-email` — nhập `{ code, token }` (`00058`).
   - `POST /it4788/user/send-verification-code` — gửi lại mã (`00048`; tài khoản đã xác minh trả `00058`).
   - `POST /it4788/user/login` — trả `user` + access token 1h + refresh token 7 ngày (`00047`).
   - `POST /it4788/user/refresh-token` — rotate refresh token (`00065`).
   - `POST /it4788/user/logout` — yêu cầu Bearer token, thu hồi refresh token (`00050`).
-  - Nền tảng: `utils/jwt.js` (2 secret, `typ` chống dùng lẫn token, lưu refresh token dạng SHA-256), `middlewares/auth.middleware.js`, `middlewares/validate.middleware.js` (Joi → mã lỗi của đề), `utils/email.js` (Nodemailer; thiếu SMTP ở dev thì in mã ra console).
-  - Rate limit in-memory cho đăng ký / đăng nhập / gửi mã / xác minh email (`middlewares/rateLimit.middleware.js`), vượt ngưỡng trả `00024`.
-- **Kiểm thử tự động nhóm API Auth**: 49 test (Jest + Supertest + MongoDB in-memory), chạy `npm test`.
+  - `POST /it4788/user/forgot-password` — gửi mã 6 số qua email, trả `resetToken` hạn 10 phút (`00048`; email không tồn tại `00036`).
+  - `POST /it4788/user/reset-password` — `{ code, token, newPassword }`, đặt mật khẩu mới và thu hồi refresh token cũ (`00068`; mã sai/hết hạn `00067`, mật khẩu mới sai định dạng `00066`, trùng mật khẩu cũ `00073`; API bổ sung, xem [tài liệu 02](02-GOP-Y-DAC-TA-API.md) mục 3.7).
+  - Nền tảng: `utils/jwt.js` (secret riêng cho access/refresh; verify + reset token có secret riêng hoặc dùng chung access secret, `typ` chống dùng lẫn token, lưu refresh token dạng SHA-256), `middlewares/auth.middleware.js`, `middlewares/validate.middleware.js` (Joi → mã lỗi của đề), `utils/email.js` (Nodemailer; thiếu SMTP ở dev thì in mã ra console).
+  - Rate limit in-memory cho đăng ký / đăng nhập / gửi mã / xác minh email / quên mật khẩu (`middlewares/rateLimit.middleware.js`), vượt ngưỡng trả `00024`.
+- **Kiểm thử tự động nhóm API Auth**: 49 test (Jest + Supertest + MongoDB in-memory), chạy `npm test`; quên mật khẩu có thêm 20 test riêng ở `tests/forgot-password.test.js`.
 - **Nhóm API Tài khoản** (`GET/PUT/DELETE /it4788/user`, `POST /it4788/user/change-password`, `PUT /it4788/user/device-token`) — xem chi tiết bên dưới.
   - `GET /user` — xem hồ sơ của chính mình (`00089`).
   - `PUT /user` — sửa `name`, `username`, `gender`, `birthday`, `language`, `timezone`, `avatar` (`00086`); nhận JSON hoặc `multipart/form-data` với ảnh ở field `image`; Joi loại bỏ `email`/`role`/`isVerified` nên không thể tự nâng quyền.
@@ -123,12 +125,14 @@ di-cho-tien-loi/
   - Gom theo nhóm, gửi một thông báo tóm tắt qua Expo Push tới mọi `deviceToken` của thành viên; chia lô 100 message/request.
   - Chỉ đánh dấu `isNotified = true` khi gửi thành công ít nhất một thiết bị; nhóm chưa có token hoặc lỗi mạng sẽ được thử lại lần sau. Sửa `useWithin` đặt lại cờ để nhắc lại.
   - Chạy thử thủ công: `npm run expiry:check`; cấu hình `EXPO_PUSH_URL`, `EXPO_ACCESS_TOKEN`, `EXPIRY_CRON_SCHEDULE`, `EXPIRY_CRON_TIMEZONE`, `EXPIRY_NOTIFY_DAYS` trong `.env`.
-- **Kiểm thử tự động**: 442 test (Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + rate limit + cron/push), hiện **442/442 pass** — xem [báo cáo kiểm thử](test-report.md).
+- **Lưu ảnh trên Cloudinary** (`config/cloudinary.js`, `middlewares/upload.middleware.js`) — ảnh đại diện và ảnh thực phẩm upload trực tiếp lên Cloudinary, DB chỉ lưu URL `https://res.cloudinary.com/...`.
+  - Multer giữ ảnh trong RAM (tối đa 5MB, chỉ nhận `image/*`) rồi đẩy lên bằng `upload_stream`; không ghi xuống đĩa nên deploy lại không mất ảnh.
+  - Ảnh đại diện được crop vuông 500×500 (ưu tiên khuôn mặt), ảnh thực phẩm giới hạn chiều rộng 1000px.
+  - Cấu hình `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLOUDINARY_FOLDER` trong `.env`.
+- **Kiểm thử tự động**: 462 test (Auth + Quên mật khẩu + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + rate limit + cron/push), hiện **462/462 pass** — xem [báo cáo kiểm thử](test-report.md).
 
 ### Chưa làm
 
-- API quên mật khẩu.
-- Upload ảnh (đại diện, thực phẩm) hiện lưu trên đĩa server (`server/uploads/`, đã gitignore); khi deploy cần chuyển sang Cloudinary để không mất ảnh.
 - Ứng dụng mobile và trang admin.
 
 ### Chạy server
@@ -136,7 +140,7 @@ di-cho-tien-loi/
 ```bash
 cd server
 npm install
-# tạo server/.env gồm PORT và MONGODB_URI
+# tạo server/.env gồm PORT, MONGODB_URI và CLOUDINARY_* (xem .env.example)
 npm run dev     # http://localhost:5000/it4788/health
 ```
 
@@ -144,7 +148,7 @@ npm run dev     # http://localhost:5000/it4788/health
 
 ```bash
 cd server
-npm test        # 442 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + rate limit + cron/push, dùng MongoDB in-memory, không cần .env
+npm test        # 462 test API Auth + Quên mật khẩu + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + rate limit + cron/push, dùng MongoDB in-memory, không cần .env
 ```
 
 ## Tài liệu
@@ -152,8 +156,8 @@ npm test        # 442 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn 
 | Tài liệu | Nội dung |
 |---|---|
 | [01 – Kế hoạch & Kiến trúc](01-KE-HOACH-KIEN-TRUC.md) | Kiến trúc hệ thống, thiết kế database, cấu trúc thư mục, danh sách màn hình, lộ trình 8 tuần, phân công |
-| [02 – Rà soát đặc tả API](02-GOP-Y-DAC-TA-API.md) | 16 lỗi phát hiện trong mô tả API của đề và đề xuất sửa đổi (phần tính điểm cộng) |
-| [Báo cáo kiểm thử](test-report.md) | 442 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + cron/push: ma trận case, kết quả, phát hiện và cách chạy |
+| [02 – Rà soát đặc tả API](02-GOP-Y-DAC-TA-API.md) | 17 lỗi phát hiện trong mô tả API của đề và đề xuất sửa đổi (phần tính điểm cộng) |
+| [Báo cáo kiểm thử](test-report.md) | 462 test API Auth + Quên mật khẩu + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + cron/push: ma trận case, kết quả, phát hiện và cách chạy |
 
 ## Bắt đầu
 

@@ -1,10 +1,10 @@
-# Báo cáo kiểm thử — nhóm API Auth, Tài khoản, Nhóm, Danh mục, Đơn vị, Thực phẩm, Tủ lạnh, Đi chợ, Bữa ăn, Công thức, Báo cáo & Cron/Push
+# Báo cáo kiểm thử — nhóm API Auth, Quên mật khẩu, Tài khoản, Nhóm, Danh mục, Đơn vị, Thực phẩm, Tủ lạnh, Đi chợ, Bữa ăn, Công thức, Báo cáo & Cron/Push
 
-- **Ngày chạy:** 29/10/2026 (bổ sung nhóm API Báo cáo)
-- **Phạm vi:** 6 endpoint Auth + 5 endpoint Tài khoản + 6 endpoint Nhóm + 4 endpoint Danh mục + 4 endpoint Đơn vị + 5 endpoint Thực phẩm + 5 endpoint Tủ lạnh + 8 endpoint Đi chợ + 5 endpoint Bữa ăn + 4 endpoint Công thức + 5 endpoint Báo cáo (`server/src/routes/user.route.js`, `group.route.js`, `admin.route.js`, `food.route.js`, `fridge.route.js`, `shopping.route.js`, `meal.route.js`, `recipe.route.js`, `report.route.js`) + endpoint health + rate limit
+- **Ngày chạy:** 29/10/2026 (bổ sung nhóm API Quên mật khẩu)
+- **Phạm vi:** 6 endpoint Auth + 2 endpoint Quên mật khẩu + 5 endpoint Tài khoản + 6 endpoint Nhóm + 4 endpoint Danh mục + 4 endpoint Đơn vị + 5 endpoint Thực phẩm + 5 endpoint Tủ lạnh + 8 endpoint Đi chợ + 5 endpoint Bữa ăn + 4 endpoint Công thức + 5 endpoint Báo cáo (`server/src/routes/user.route.js`, `group.route.js`, `admin.route.js`, `food.route.js`, `fridge.route.js`, `shopping.route.js`, `meal.route.js`, `recipe.route.js`, `report.route.js`) + endpoint health + rate limit
 - **Công cụ:** Jest 30.5.2, Supertest 7.3.1, mongodb-memory-server 11.3.0
 - **Môi trường:** Windows, Node.js v24.11.0, MongoDB in-memory 8.2.6
-- **Kết quả:** **442/442 test PASS**, 14 test suite, ~97 giây (sau khi binary Mongo đã tải sẵn)
+- **Kết quả:** **462/462 test PASS**, 15 test suite, ~65 giây (sau khi binary Mongo đã tải sẵn)
 
 ## Cách chạy
 
@@ -17,6 +17,7 @@ npm test             # jest --runInBand
 Cấu hình: [`server/jest.config.js`](../server/jest.config.js), biến môi trường test ở
 [`server/tests/setup-env.js`](../server/tests/setup-env.js), test suite ở
 [`server/tests/auth.test.js`](../server/tests/auth.test.js),
+[`server/tests/forgot-password.test.js`](../server/tests/forgot-password.test.js),
 [`server/tests/user.test.js`](../server/tests/user.test.js),
 [`server/tests/group.test.js`](../server/tests/group.test.js),
 [`server/tests/category.test.js`](../server/tests/category.test.js),
@@ -34,7 +35,7 @@ Cấu hình: [`server/jest.config.js`](../server/jest.config.js), biến môi tr
 Đặc điểm bộ test:
 
 - Dùng **MongoDB in-memory** nên không chạm vào DB thật, không cần `.env`, chạy được trên CI.
-- **Mock `utils/email.js`** — không gửi email thật; mã 6 số lấy từ `mock.calls` để test luồng verify.
+- **Mock `utils/email.js`** — không gửi email thật; mã 6 số (`sendVerificationCode` / `sendPasswordResetCode`) lấy từ `mock.calls` để test luồng verify và quên mật khẩu.
 - `BCRYPT_ROUNDS=4` cho nhanh; JWT secret cố định trong `setup-env.js`.
 - `User.deleteMany({})` + `Group.deleteMany({})` + `Category.deleteMany({})` + `Unit.deleteMany({})` + `Food.deleteMany({})` + `FridgeItem.deleteMany({})` + `FridgeEvent.deleteMany({})` + `ShoppingList.deleteMany({})` + `Task.deleteMany({})` + `MealPlan.deleteMany({})` + `Recipe.deleteMany({})` trước mỗi test → các test độc lập, không phụ thuộc thứ tự.
 - Rate limit tắt mặc định trong bộ test chức năng (`AUTH_RATE_LIMIT_MAX=0`), có test riêng với ngưỡng thấp.
@@ -189,10 +190,48 @@ Kiểm tra thêm ở case 6: mật khẩu trong DB là hash bcrypt (không phả
 Ghi chú nhóm Tài khoản:
 
 - `PUT /user` nhận cả JSON và `multipart/form-data` (ảnh field `image`, tối đa 5MB, chỉ nhận `image/*`).
-  Ảnh hiện lưu ở `server/uploads/avatars/` và phục vụ qua `/it4788/uploads/...`; khi deploy nên chuyển sang Cloudinary.
+  Ảnh được upload lên Cloudinary và DB lưu URL `https://res.cloudinary.com/...`; cấu hình `CLOUDINARY_*` trong `.env`.
 - Đổi mật khẩu **thu hồi refresh token** đang lưu để các phiên cũ không tiếp tục được; access token hiện tại vẫn dùng được tới khi hết hạn (1 giờ).
 - `PUT /user/device-token` là API bổ sung (đặc tả gốc không có), chưa có mã response riêng nên dùng `00086`/`00025`.
 - `DELETE /user` gỡ user khỏi nhóm trước khi xoá tài khoản: thành viên bị bỏ khỏi `members`, trưởng nhóm rời đi thì chuyển quyền cho thành viên còn lại (hoặc xoá nhóm nếu không còn ai, kèm dọn đồ trong tủ lạnh). Các dữ liệu khác (danh sách mua sắm, bữa ăn...) chưa dọn vì model chưa được xây dựng.
+
+### Nhóm API Quên mật khẩu (`tests/forgot-password.test.js`) — 20/20
+
+#### `POST /it4788/user/forgot-password` — yêu cầu mã (7/7)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| F1 | Thiếu email | 400 / `00005` | PASS |
+| F2 | Email sai định dạng | 400 / `00026` | PASS |
+| F3 | Email không tồn tại | 404 / `00036`; không gửi email | PASS |
+| F4 | Hợp lệ | 200 / `00048`; trả `resetToken`, `codeExpiresIn=600`; mã 6 số hạn 10 phút, mật khẩu chưa đổi | PASS |
+| F5 | Email viết hoa | Tìm thấy tài khoản, gửi mã bình thường | PASS |
+| F6 | Yêu cầu lại | Mã mới thay mã cũ; mã cũ dùng để đặt lại trả `00067` | PASS |
+| F7 | Dùng mã xác minh email để đặt lại mật khẩu | 400 / `00067` (hai loại mã nằm ở trường riêng) | PASS |
+
+#### `POST /it4788/user/reset-password` — đặt mật khẩu mới (13/13)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| F8 | Thiếu mã | 400 / `00053` | PASS |
+| F9 | Mã không đúng 6 chữ số | 400 / `00067` | PASS |
+| F10 | Mật khẩu mới 5 ký tự | 400 / `00066` | PASS |
+| F11 | Thiếu token | 401 / `00055` | PASS |
+| F12 | Token rác | 401 / `00055` | PASS |
+| F13 | Dùng access token thay token đặt lại | 401 / `00055` | PASS |
+| F14 | Token hợp lệ nhưng user không tồn tại | 404 / `00052` | PASS |
+| F15 | Mã sai | 400 / `00067`; mật khẩu cũ vẫn đăng nhập được | PASS |
+| F16 | Mã quá hạn | 400 / `00067`; mật khẩu không đổi | PASS |
+| F17 | Token và mã của hai người khác nhau | 400 / `00067`; không tài khoản nào bị đổi | PASS |
+| F18 | Mật khẩu mới trùng mật khẩu hiện tại | 400 / `00073` | PASS |
+| F19 | Đặt lại thành công | 200 / `00068`; mật khẩu cũ không đăng nhập được, mật khẩu mới đăng nhập được; DB lưu hash bcrypt, xoá mã; dùng lại token/mã trả `00067` | PASS |
+| F20 | Refresh token của phiên cũ | 401 / `00063` (đã bị thu hồi sau khi đặt lại) | PASS |
+
+Ghi chú nhóm Quên mật khẩu:
+
+- Luồng 2 bước giống xác minh email: `forgot-password` gửi mã 6 số qua email và trả `resetToken` (JWT `typ=reset`, hạn 10 phút); `reset-password` nhận `{ code, token, newPassword }`.
+- Mã đặt lại lưu ở `passwordResetCode` / `passwordResetCodeExpiresAt` (riêng với mã xác minh email), dùng `safeCompare` khi so sánh; đặt lại xong thì xoá mã và **thu hồi refresh token** như đổi mật khẩu.
+- Không tiết lộ mã cho client: dev chưa cấu hình SMTP thì mã chỉ in ra console (`utils/email.js`).
 
 ### Nhóm API Nhóm gia đình (`tests/group.test.js`) — 32/32
 
@@ -930,7 +969,7 @@ Ghi chú triển khai:
 
 ## Còn tồn tại (chưa khắc phục)
 
-- `.env` hiện không có `JWT_VERIFY_SECRET`, nên verification token dùng chung secret với access token (vẫn an toàn nhờ claim `typ`). Nên bổ sung secret riêng cho production.
+- `.env` hiện không có `JWT_VERIFY_SECRET` / `JWT_RESET_SECRET`, nên verification token và reset token dùng chung secret với access token (vẫn an toàn nhờ claim `typ`). Nên bổ sung secret riêng cho production.
 - Rate limit chưa có test cho trường hợp nhiều IP khác nhau (cần giả lập `X-Forwarded-For` + `trust proxy`).
 - `DELETE /admin/category` và `DELETE /admin/unit` chưa kiểm tra thực phẩm đang tham chiếu: xoá danh mục/đơn vị sẽ để lại `Food` trỏ tới id không còn tồn tại. Cần chặn (trả mã phù hợp) hoặc chuyển thực phẩm sang danh mục/đơn vị mặc định.
 

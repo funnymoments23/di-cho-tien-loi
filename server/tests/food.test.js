@@ -1,13 +1,20 @@
 const request = require('supertest');
 const mongoose = require('mongoose');
 const os = require('os');
-const fs = require('fs');
-const path = require('path');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 
 // Không gửi email thật: dùng mock như các test Auth/Tài khoản/Nhóm.
 jest.mock('../src/utils/email', () => ({
   sendVerificationCode: jest.fn(async () => ({ delivered: false, devCode: null })),
+}));
+
+// Không gọi Cloudinary thật khi test: trả về URL giả cố định.
+jest.mock('../src/config/cloudinary', () => ({
+  isConfigured: () => true,
+  uploadBuffer: jest.fn(async () => ({
+    secure_url: 'https://res.cloudinary.com/demo/image/upload/v1/foods/food-test.png',
+    public_id: 'foods/food-test',
+  })),
 }));
 
 const app = require('../src/app');
@@ -16,7 +23,6 @@ const Group = require('../src/models/group.models');
 const Category = require('../src/models/category.models');
 const Unit = require('../src/models/unit.models');
 const Food = require('../src/models/food.models');
-const { FOOD_DIR } = require('../src/middlewares/upload.middleware');
 const emailUtil = require('../src/utils/email');
 const RC = require('../src/constants/responseCode');
 
@@ -376,11 +382,7 @@ describe(`POST ${FOOD} — tạo thực phẩm`, () => {
 
     expect(res.status).toBe(201);
     expect(res.body.code).toBe(RC.FOOD_CREATE_SUCCESS.code);
-    expect(res.body.data.image).toMatch(/^\/it4788\/uploads\/foods\/.+\.png$/);
-
-    const savedPath = path.join(FOOD_DIR, path.basename(res.body.data.image));
-    expect(fs.existsSync(savedPath)).toBe(true);
-    fs.unlinkSync(savedPath); // dọn file test
+    expect(res.body.data.image).toMatch(/^https:\/\/res\.cloudinary\.com\/.+\.png$/);
   });
 
   it('00158 khi tệp tải lên không phải ảnh', async () => {
@@ -543,11 +545,7 @@ describe(`PUT ${FOOD} — sửa thực phẩm`, () => {
 
     expect(res.status).toBe(200);
     expect(res.body.code).toBe(RC.FOOD_UPDATE_SUCCESS.code);
-    expect(res.body.data.image).toMatch(/^\/it4788\/uploads\/foods\/.+\.png$/);
-
-    const savedPath = path.join(FOOD_DIR, path.basename(res.body.data.image));
-    expect(fs.existsSync(savedPath)).toBe(true);
-    fs.unlinkSync(savedPath); // dọn file test
+    expect(res.body.data.image).toMatch(/^https:\/\/res\.cloudinary\.com\/.+\.png$/);
   });
 });
 

@@ -9,13 +9,13 @@
 
 ## Tóm tắt
 
-Nhóm đã rà soát toàn bộ **bảng 200+ mã response** và **bảng 50 endpoint** trong tài liệu đặc tả API. Kết quả phát hiện **16 vấn đề**, chia làm ba mức độ:
+Nhóm đã rà soát toàn bộ **bảng 200+ mã response** và **bảng 50 endpoint** trong tài liệu đặc tả API. Kết quả phát hiện **17 vấn đề**, chia làm ba mức độ:
 
 | Mức | Số lượng | Bản chất |
 |---|---|---|
 | **Nghiêm trọng** — API không thể hoạt động đúng như mô tả | 4 | Sai Content-Type khi upload file, Logout không có xác thực, thiếu trường trong body, tạo nhóm không có tên |
 | **Trung bình** — gây khó khăn khi triển khai, cần thống nhất | 6 | Mã response trùng lặp, đặt tên tham số không nhất quán, DELETE mang body |
-| **Thiếu sót** — đề bài yêu cầu nhưng đặc tả API không có | 6 | Tìm kiếm, gợi ý món ăn, thống kê, cập nhật device token, hoàn thành task, vị trí lưu trữ |
+| **Thiếu sót** — đề bài yêu cầu nhưng đặc tả API không có | 7 | Tìm kiếm, gợi ý món ăn, thống kê, cập nhật device token, hoàn thành task, vị trí lưu trữ, quên mật khẩu |
 
 ---
 
@@ -225,6 +225,44 @@ Body: { "isCompleted": true }
 Body của `Create fridge item` chỉ có `foodName`, `useWithin`, `quantity` — **thiếu hẳn trường vị trí**.
 
 **Đề xuất:** thêm trường `location` (ngăn mát / ngăn đá / cánh tủ / ngoài tủ).
+
+### 3.7 Quên mật khẩu
+
+Màn hình `forgot-password` có trong kế hoạch (tài liệu 01) nhưng **đặc tả API không có endpoint nào** để lấy lại mật khẩu. Trong dải mã mật khẩu, `00066` ("mật khẩu mới không hợp lệ") và `00068` ("mật khẩu mới đã được tạo thành công") đang bị bỏ trống — cho thấy đề có dự kiến chức năng này nhưng thiếu phần mô tả.
+
+**API đề xuất (2 bước, cùng khuôn với đăng ký / xác minh email):**
+
+```
+POST /user/forgot-password
+Body: { "email": "user@example.com" }
+-> 200 / 00048: { "resetToken": "...", "codeExpiresIn": 600 }
+   (email nhận mã 6 số, hạn 10 phút)
+
+POST /user/reset-password
+Body: { "code": "123456", "token": "<resetToken>", "newPassword": "..." }
+-> 200 / 00068
+```
+
+| Mã | Trường hợp |
+|---|---|
+| `00005` | Thiếu `email` ở bước 1 |
+| `00026` | `email` sai định dạng |
+| `00036` | Không tìm thấy tài khoản với email |
+| `00048` | Đã gửi mã đặt lại mật khẩu |
+| `00053` | Thiếu mã xác nhận |
+| `00055` | Token đặt lại không hợp lệ / hết hạn |
+| `00066` | Mật khẩu mới sai định dạng |
+| `00067` | Mã đặt lại sai hoặc hết hạn (số còn trống trong dải 00066–00076) |
+| `00068` | Đặt lại mật khẩu thành công |
+| `00073` | Mật khẩu mới trùng mật khẩu hiện tại |
+| `00052` | Token hợp lệ nhưng tài khoản đã bị xoá |
+
+**Ghi chú thiết kế:**
+
+- Mã đặt lại dùng trường riêng (`passwordResetCode`), **không** dùng chung `verificationCode` của xác minh email — tránh việc đang xác minh email dở dang thì bị mất mã.
+- Token `resetToken` là JWT `typ=reset` (hạn 10 phút, secret `JWT_RESET_SECRET` hoặc dùng chung `JWT_ACCESS_SECRET`), không dùng được như access token.
+- Đặt lại thành công sẽ **thu hồi refresh token** đang lưu, buộc mọi phiên cũ đăng nhập lại — giống `change-password`.
+- Hai endpoint dùng chung rate limit với các API auth khác (mặc định 20 request / 15 phút / IP).
 
 ---
 

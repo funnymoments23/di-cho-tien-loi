@@ -35,10 +35,22 @@ const sendVerificationCodeSchema = Joi.object({
   email: email.required(),
 });
 
+const forgotPasswordSchema = Joi.object({
+  email: email.required(),
+});
+
+const resetPasswordSchema = Joi.object({
+  code: Joi.string().trim().length(6).pattern(/^\d+$/).required(),
+  token: Joi.string().trim().required(),
+  newPassword: password.required(),
+});
+
 module.exports = {
   registerSchema,
   loginSchema,
   refreshTokenSchema,
   verifyEmailSchema,
   sendVerificationCodeSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 };

@@ -10,7 +10,8 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Ảnh đại diện upload lên được phục vụ tĩnh (xem middlewares/upload.middleware.js)
+// Ảnh mới nằm trên Cloudinary; route này chỉ còn phục vụ ảnh cũ lưu trên đĩa
+// trước khi chuyển sang Cloudinary (xem middlewares/upload.middleware.js).
 app.use('/it4788/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 // Tất cả API nằm dưới prefix /it4788
