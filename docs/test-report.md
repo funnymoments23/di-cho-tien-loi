@@ -1,10 +1,10 @@
-# Báo cáo kiểm thử — nhóm API Auth, Tài khoản, Nhóm, Danh mục, Đơn vị, Thực phẩm, Tủ lạnh, Đi chợ, Bữa ăn & Công thức
+# Báo cáo kiểm thử — nhóm API Auth, Tài khoản, Nhóm, Danh mục, Đơn vị, Thực phẩm, Tủ lạnh, Đi chợ, Bữa ăn, Công thức & Cron/Push
 
-- **Ngày chạy:** 29/10/2026 (bổ sung nhóm API Bữa ăn & Công thức)
+- **Ngày chạy:** 29/10/2026 (bổ sung nhóm API Bữa ăn, Công thức, cron & push)
 - **Phạm vi:** 6 endpoint Auth + 5 endpoint Tài khoản + 6 endpoint Nhóm + 4 endpoint Danh mục + 4 endpoint Đơn vị + 5 endpoint Thực phẩm + 5 endpoint Tủ lạnh + 8 endpoint Đi chợ + 5 endpoint Bữa ăn + 4 endpoint Công thức (`server/src/routes/user.route.js`, `group.route.js`, `admin.route.js`, `food.route.js`, `fridge.route.js`, `shopping.route.js`, `meal.route.js`, `recipe.route.js`) + endpoint health + rate limit
 - **Công cụ:** Jest 30.5.2, Supertest 7.3.1, mongodb-memory-server 11.3.0
 - **Môi trường:** Windows, Node.js v24.11.0, MongoDB in-memory 8.2.6
-- **Kết quả:** **399/399 test PASS**, 11 test suite, ~35 giây (sau khi binary Mongo đã tải sẵn)
+- **Kết quả:** **418/418 test PASS**, 13 test suite, ~41 giây (sau khi binary Mongo đã tải sẵn)
 
 ## Cách chạy
 
@@ -25,7 +25,9 @@ Cấu hình: [`server/jest.config.js`](../server/jest.config.js), biến môi tr
 [`server/tests/fridge.test.js`](../server/tests/fridge.test.js),
 [`server/tests/shopping.test.js`](../server/tests/shopping.test.js),
 [`server/tests/meal.test.js`](../server/tests/meal.test.js),
-[`server/tests/recipe.test.js`](../server/tests/recipe.test.js) và
+[`server/tests/recipe.test.js`](../server/tests/recipe.test.js),
+[`server/tests/push-notification.test.js`](../server/tests/push-notification.test.js),
+[`server/tests/expiry-checker.test.js`](../server/tests/expiry-checker.test.js) và
 [`server/tests/rate-limit.test.js`](../server/tests/rate-limit.test.js).
 
 Đặc điểm bộ test:
@@ -822,6 +824,37 @@ Ghi chú nhóm Công thức:
 - Quyền: mọi thành viên trong nhóm được thêm / sửa / xoá công thức (docs/01 mục 5); công thức của nhóm khác coi như không tồn tại (`00365`, `00373`).
 - Đặc tả gốc dùng `?foodId=` cho `GET /recipe`; nhóm hỗ trợ thêm `?foodName=` cho đồng nhất với các API thực phẩm khác ([tài liệu 02](02-GOP-Y-DAC-TA-API.md) mục 2.5). Không truyền tham số thì trả toàn bộ công thức của nhóm.
 - `htmlContent` được trả đầy đủ trong danh sách để màn hình chi tiết render trực tiếp bằng `react-native-render-html`.
+
+### Thông báo đẩy & cron (`tests/push-notification.test.js`, `tests/expiry-checker.test.js`) — 19/19
+
+#### `utils/pushNotification.js` — dựng và gửi message (11/11)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| P1 | Token Expo hợp lệ / không hợp lệ | Chỉ nhận `ExponentPushToken[...]` và `ExpoPushToken[...]` | PASS |
+| P2 | Tính số ngày còn lại | Tính theo ngày UTC; mục quá hạn trả 0 | PASS |
+| P3 | Một món sắp hết hạn | Body `Sữa tươi sẽ hết hạn sau 2 ngày!`, data có `itemIds` | PASS |
+| P4 | Nhiều món + token trùng/không hợp lệ | Một message/token hợp lệ, body tóm tắt danh sách | PASS |
+| P5 | Không có token hợp lệ | Không tạo message | PASS |
+| P6 | Không có message | Không gọi `fetch` | PASS |
+| P7 | Gửi thành công | Gọi đúng Expo endpoint, header JSON, đếm `sent` | PASS |
+| P8 | 101 message | Chia 2 lô 100 + 1 | PASS |
+| P9 | Ticket lỗi (`DeviceNotRegistered`) | `failed = 1`, không ném lỗi | PASS |
+| P10 | HTTP 503 | `failed = 1`, ghi lỗi | PASS |
+| P11 | Lỗi mạng | `failed = 1`, không làm sập cron | PASS |
+
+#### `jobs/expiryChecker.job.js` — quét và đánh dấu (8/8)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| P12 | Khoảng quét mặc định | Từ 00:00 hôm nay tới hết ngày thứ 3 (UTC) | PASS |
+| P13 | `EXPIRY_NOTIFY_DAYS` | Đọc env; giá trị sai dùng mặc định 3 | PASS |
+| P14 | Chọn mục cần nhắc | Bỏ mục quá hạn, quá 4 ngày, đã nhắc; nhận hôm nay → +3 ngày | PASS |
+| P15 | Gửi theo nhóm | Mỗi nhóm một thông báo tóm tắt, mỗi token một message | PASS |
+| P16 | Nhóm chưa có deviceToken | Không gửi, không đánh dấu, đếm `groupsSkippedNoToken` | PASS |
+| P17 | Gửi thất bại | Giữ `isNotified = false`, đếm `itemsFailed` | PASS |
+| P18 | Chạy lần hai | Không gửi lại mục đã nhắc | PASS |
+| P19 | Không có mục nào | Không gọi Expo, summary toàn 0 | PASS |
 
 ## 4 vấn đề đã khắc phục
 
