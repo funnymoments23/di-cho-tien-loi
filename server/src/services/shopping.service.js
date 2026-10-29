@@ -347,6 +347,8 @@ const completeTask = async (userId, taskId, { isCompleted }) => {
   }
 
   task.isCompleted = isCompleted;
+  // Báo cáo mua sắm lọc theo thời điểm tick, không dựa vào updatedAt.
+  task.completedAt = isCompleted ? new Date() : null;
   await task.save();
   await task.populate(TASK_POPULATE);
   return toPublicTask(task);

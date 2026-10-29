@@ -190,6 +190,12 @@ GET /report/consumption?from=<ngày>&to=<ngày>  # thống kê tiêu thụ
 GET /report/waste?from=<ngày>&to=<ngày>        # thống kê thực phẩm bị hết hạn (lãng phí)
 ```
 
+> **Trạng thái triển khai (phương án B — ghi nhận sự kiện tối thiểu):** nhóm đã làm 5 endpoint `GET /report/overview`, `/shopping`, `/consumption`, `/waste`, `/fridge`.
+> - `Task` được bổ sung `completedAt` để biết món nào được mua trong khoảng thời gian.
+> - Thêm model `FridgeEvent`: mỗi lần xoá một mục khỏi tủ ghi lại `consumed` / `expired` / `discarded`, kèm tên thực phẩm, danh mục, đơn vị và số lượng tại thời điểm xoá — nhờ vậy báo cáo không mất dữ liệu khi thực phẩm bị đổi tên hoặc bị xoá.
+> - `DELETE /fridge` nhận thêm `reason` tuỳ chọn (`consumed` / `expired` / `discarded`); client cũ chỉ gửi `foodName` vẫn chạy, server suy ra lý do theo hạn sử dụng.
+> - Báo cáo mặc định 30 ngày gần nhất, tối đa 366 ngày, tính ngày theo giờ Việt Nam; phạm vi là nhóm của người đang đăng nhập.
+
 ### 3.4 Cập nhật device token cho push notification
 
 Đặc tả chỉ nhận `deviceId` **một lần duy nhất lúc đăng ký**. Trên thực tế, Expo push token **thay đổi** khi người dùng cài lại app, đổi máy hoặc hệ điều hành cấp lại token. Không có API cập nhật thì **push notification sẽ ngừng hoạt động** với phần lớn người dùng sau một thời gian — làm hỏng chức năng "nhắc nhở trước 3 ngày" vốn là điểm nhấn của đề.

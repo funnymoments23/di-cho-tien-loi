@@ -110,16 +110,24 @@ di-cho-tien-loi/
   - `PUT /recipe` — `{ recipeId, newFoodName?, newName?, newDescription?, newHtmlContent? }` (`00370`; thiếu `recipeId` `00359`, không có trường cập nhật `00360`, trường mới sai `00361`–`00364`, không tìm thấy `00365`, thực phẩm mới không tồn tại `00367`).
   - `DELETE /recipe` — `{ recipeId }` (`00376`; thiếu `recipeId` `00371`, sai định dạng `00372`, không tìm thấy `00373`).
   - Nền tảng: model `Recipe` (`foodId`, `groupId`, `name`, `description`, `htmlContent`), serializer `toPublicRecipe`; xoá thực phẩm hoặc xoá nhóm cũng dọn kế hoạch bữa ăn / công thức liên quan.
+- **Nhóm API Báo cáo** (`routes/report.route.js`, 5 endpoint) — thống kê theo đề mục B.6, ghi nhận dữ liệu theo hướng "sự kiện tối thiểu" (phương án B).
+  - `GET /report/overview?from=&to=` — gộp số liệu mua sắm / tiêu thụ / lãng phí / tủ lạnh trong một request (`00380`; chưa vào nhóm `00385`, khoảng ngày sai `00386`).
+  - `GET /report/shopping?from=&to=` — số danh sách, số món, số món đã mua, tỉ lệ hoàn thành, chuỗi theo ngày, theo danh mục và người được giao (`00381`).
+  - `GET /report/consumption?from=&to=` — thực phẩm dùng hết trước hạn, theo ngày / thực phẩm / danh mục (`00382`).
+  - `GET /report/waste?from=&to=` — thực phẩm hết hạn hoặc bị bỏ, tỉ lệ lãng phí trên tổng lượng đã xử lý (`00383`).
+  - `GET /report/fridge` — ảnh chụp tủ hiện tại: tổng món, sắp hết hạn, đã hết hạn, theo vị trí / danh mục (`00384`).
+  - Nền tảng: thêm `Task.completedAt` (đặt khi tick, xoá khi bỏ tick) và model `FridgeEvent` ghi lại mỗi lần xoá mục khỏi tủ với `action` `consumed` / `expired` / `discarded`. `DELETE /fridge` nhận thêm `reason` tuỳ chọn (`00226`); không gửi thì suy ra theo hạn sử dụng (còn hạn → tiêu thụ, quá hạn → lãng phí).
+  - Quy ước báo cáo: `from` / `to` dạng `YYYY-MM-DD`, mặc định 30 ngày gần nhất, tối đa 366 ngày, tính ngày theo giờ Việt Nam; mọi số liệu giới hạn trong nhóm của người đang đăng nhập. Lịch sử tiêu thụ / lãng phí chỉ có từ thời điểm bật tính năng — dữ liệu xoá trước đó không tái tạo được.
 - **Nhắc thực phẩm sắp hết hạn** (`jobs/expiryChecker.job.js`, `utils/pushNotification.js`) — cron chạy 08:00 mỗi ngày (giờ Việt Nam).
   - Quét `fridgeitems` có `isNotified = false` và `expiryDate` trong 3 ngày tới (đổi bằng `EXPIRY_NOTIFY_DAYS`).
   - Gom theo nhóm, gửi một thông báo tóm tắt qua Expo Push tới mọi `deviceToken` của thành viên; chia lô 100 message/request.
   - Chỉ đánh dấu `isNotified = true` khi gửi thành công ít nhất một thiết bị; nhóm chưa có token hoặc lỗi mạng sẽ được thử lại lần sau. Sửa `useWithin` đặt lại cờ để nhắc lại.
   - Chạy thử thủ công: `npm run expiry:check`; cấu hình `EXPO_PUSH_URL`, `EXPO_ACCESS_TOKEN`, `EXPIRY_CRON_SCHEDULE`, `EXPIRY_CRON_TIMEZONE`, `EXPIRY_NOTIFY_DAYS` trong `.env`.
-- **Kiểm thử tự động**: 418 test (Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + rate limit + cron/push), hiện **418/418 pass** — xem [báo cáo kiểm thử](test-report.md).
+- **Kiểm thử tự động**: 442 test (Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + rate limit + cron/push), hiện **442/442 pass** — xem [báo cáo kiểm thử](test-report.md).
 
 ### Chưa làm
 
-- Các API thống kê `GET /report/*` và API quên mật khẩu.
+- API quên mật khẩu.
 - Upload ảnh (đại diện, thực phẩm) hiện lưu trên đĩa server (`server/uploads/`, đã gitignore); khi deploy cần chuyển sang Cloudinary để không mất ảnh.
 - Ứng dụng mobile và trang admin.
 
@@ -136,7 +144,7 @@ npm run dev     # http://localhost:5000/it4788/health
 
 ```bash
 cd server
-npm test        # 418 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + rate limit + cron/push, dùng MongoDB in-memory, không cần .env
+npm test        # 442 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + rate limit + cron/push, dùng MongoDB in-memory, không cần .env
 ```
 
 ## Tài liệu
@@ -145,7 +153,7 @@ npm test        # 418 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn 
 |---|---|
 | [01 – Kế hoạch & Kiến trúc](01-KE-HOACH-KIEN-TRUC.md) | Kiến trúc hệ thống, thiết kế database, cấu trúc thư mục, danh sách màn hình, lộ trình 8 tuần, phân công |
 | [02 – Rà soát đặc tả API](02-GOP-Y-DAC-TA-API.md) | 16 lỗi phát hiện trong mô tả API của đề và đề xuất sửa đổi (phần tính điểm cộng) |
-| [Báo cáo kiểm thử](test-report.md) | 418 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + cron/push: ma trận case, kết quả, phát hiện và cách chạy |
+| [Báo cáo kiểm thử](test-report.md) | 442 test API Auth + Tài khoản + Nhóm + Danh mục + Đơn vị + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + cron/push: ma trận case, kết quả, phát hiện và cách chạy |
 
 ## Bắt đầu
 

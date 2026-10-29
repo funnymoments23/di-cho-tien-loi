@@ -33,9 +33,14 @@ const updateFridgeItemSchema = Joi.object({
   newLocation: locationSchema,
 });
 
-/** DELETE /fridge — xoá mục trong tủ theo tên thực phẩm (đặc tả dùng body). */
+/**
+ * DELETE /fridge — xoá mục trong tủ theo tên thực phẩm (đặc tả dùng body).
+ * `reason` là trường bổ sung phục vụ báo cáo tiêu thụ / lãng phí; không gửi thì
+ * service tự suy ra theo hạn sử dụng.
+ */
 const deleteFridgeItemSchema = Joi.object({
   foodName: foodNameSchema.required(),
+  reason: Joi.string().trim().valid('consumed', 'expired', 'discarded'),
 });
 
 module.exports = {

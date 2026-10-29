@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const FridgeItem = require('../models/fridgeItem.models');
+const FridgeEvent = require('../models/fridgeEvent.models');
 const Food = require('../models/food.models');
 const User = require('../models/user.models');
 const Group = require('../models/group.models');
@@ -61,6 +62,23 @@ const findFoodInGroup = async (groupId, foodName) => {
 // Query có thể là mảng khi client lặp tham số (?foodName=a&foodName=b):
 // chỉ nhận chuỗi, còn lại coi như không có giá trị.
 const normalizeText = (value) => (typeof value === 'string' ? value.trim() : null);
+
+/**
+ * Quy ước khi một mục rời khỏi tủ (docs/02 mục 3.3):
+ * - Client gửi `reason` (consumed / expired / discarded) thì dùng đúng lý do đó.
+ * - Không gửi thì suy ra: còn hạn -> consumed, đã qua ngày hết hạn -> expired.
+ * Mốc "hôm nay" tính theo UTC giống cron nhắc hạn, vì `expiryDate` được tạo từ
+ * chuỗi YYYY-MM-DD (00:00 UTC).
+ */
+const resolveRemovalAction = (expiryDate, reason) => {
+  if (reason) return reason;
+
+  const now = new Date();
+  const startOfToday = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  );
+  return new Date(expiryDate).getTime() < startOfToday.getTime() ? 'expired' : 'consumed';
+};
 
 /** GET /fridge — toàn bộ mục trong tủ của nhóm, sắp xếp theo hạn sử dụng gần nhất. */
 const getFridgeItems = async (userId) => {
@@ -196,8 +214,9 @@ const updateFridgeItem = async (userId, payload) => {
 /**
  * DELETE /fridge — xoá mục trong tủ theo tên thực phẩm.
  * Thực phẩm thuộc nhóm khác trả 00219 (không có quyền).
+ * Trước khi xoá, ghi một `FridgeEvent` để báo cáo tiêu thụ / lãng phí có dữ liệu.
  */
-const deleteFridgeItem = async (userId, { foodName }) => {
+const deleteFridgeItem = async (userId, { foodName, reason }) => {
   const { group } = await loadGroupContext(userId, RC.FRIDGE_DELETE_NO_PERMISSION); // 00219
 
   const { food, otherGroup } = await findFoodInGroup(group._id, normalizeText(foodName));
@@ -210,6 +229,27 @@ const deleteFridgeItem = async (userId, { foodName }) => {
   if (!item) throw fail(RC.FRIDGE_DELETE_ITEM_NOT_CREATED); // 00221
 
   const data = toPublicFridgeItem(item);
+
+  // Ghi lịch sử trước khi xoá. Lỗi ghi lịch sử không được làm hỏng thao tác xoá
+  // (báo cáo là tính năng phụ, xoá mục vẫn là nghiệp vụ chính của người dùng).
+  try {
+    const populatedFood = item.foodId;
+    await FridgeEvent.create({
+      groupId: group._id,
+      foodId: populatedFood?._id ?? null,
+      foodName: populatedFood?.name ?? data.foodName ?? 'Không xác định',
+      categoryName: populatedFood?.categoryId?.name ?? null,
+      unitName: populatedFood?.unitId?.name ?? null,
+      quantity: item.quantity,
+      expiryDate: item.expiryDate,
+      location: item.location ?? null,
+      action: resolveRemovalAction(item.expiryDate, reason),
+      actedBy: userId,
+    });
+  } catch (err) {
+    console.error('[fridge] không ghi được lịch sử xoá mục tủ lạnh:', err);
+  }
+
   await FridgeItem.deleteOne({ _id: item._id });
   return data;
 };

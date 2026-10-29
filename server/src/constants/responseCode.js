@@ -224,6 +224,8 @@ const RESPONSE_CODE = Object.freeze({
     FRIDGE_DELETE_NO_PERMISSION: def('00219', FORBIDDEN, 'Bạn không có quyền'),
     FRIDGE_DELETE_ITEM_NOT_CREATED: def('00221', NOT_FOUND, 'Mục trong tủ lạnh liên kết với thực phẩm này chưa được tạo'),
     FRIDGE_DELETE_SUCCESS: def('00224', OK, 'Xóa mục trong tủ lạnh thành công'),
+    // Lý do xoá là trường bổ sung phục vụ báo cáo tiêu thụ / lãng phí (docs/02 mục 3.3).
+    FRIDGE_DELETE_INVALID_REASON: def('00226', BAD_REQUEST, 'Lý do xóa không hợp lệ. Chỉ nhận consumed, expired hoặc discarded.'),
 
     FRIDGE_GET_NOT_IN_GROUP: def('00225', FORBIDDEN, 'Bạn chưa vào nhóm nào'),
     FRIDGE_GET_SUCCESS: def('00228', OK, 'Lấy danh sách đồ tủ lạnh thành công'),
@@ -353,6 +355,20 @@ const RESPONSE_CODE = Object.freeze({
     RECIPE_DELETE_SUCCESS: def('00376', OK, 'Công thức của bạn đã được xóa thành công'),
 
     RECIPE_GET_SUCCESS: def('00378', OK, 'Lấy các công thức thành công'),
+
+    // ===== Báo cáo / thống kê (report) =====
+    // Dải 00380–00386 dành cho nhóm API bổ sung GET /report/* (docs/02 mục 3.3).
+    REPORT_OVERVIEW_SUCCESS: def('00380', OK, 'Lấy báo cáo tổng hợp thành công'),
+    REPORT_SHOPPING_SUCCESS: def('00381', OK, 'Lấy báo cáo mua sắm thành công'),
+    REPORT_CONSUMPTION_SUCCESS: def('00382', OK, 'Lấy báo cáo tiêu thụ thành công'),
+    REPORT_WASTE_SUCCESS: def('00383', OK, 'Lấy báo cáo lãng phí thành công'),
+    REPORT_FRIDGE_SUCCESS: def('00384', OK, 'Lấy báo cáo tủ lạnh thành công'),
+    REPORT_NOT_IN_GROUP: def('00385', FORBIDDEN, 'Bạn chưa vào nhóm nào'),
+    REPORT_INVALID_DATE_RANGE: def(
+      '00386',
+      BAD_REQUEST,
+      'Khoảng thời gian không hợp lệ. Vui lòng cung cấp ngày dạng YYYY-MM-DD, from <= to và tối đa 366 ngày.'
+    ),
 });
 
 module.exports = RESPONSE_CODE;

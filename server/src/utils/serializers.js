@@ -111,6 +111,7 @@ const toPublicTask = (task) => {
     unitName: unit?.name ?? null,
     quantity: task.quantity,
     isCompleted: task.isCompleted,
+    completedAt: task.completedAt ?? null,
     createdAt: task.createdAt,
     updatedAt: task.updatedAt,
   };

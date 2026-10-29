@@ -1,10 +1,10 @@
-# Báo cáo kiểm thử — nhóm API Auth, Tài khoản, Nhóm, Danh mục, Đơn vị, Thực phẩm, Tủ lạnh, Đi chợ, Bữa ăn, Công thức & Cron/Push
+# Báo cáo kiểm thử — nhóm API Auth, Tài khoản, Nhóm, Danh mục, Đơn vị, Thực phẩm, Tủ lạnh, Đi chợ, Bữa ăn, Công thức, Báo cáo & Cron/Push
 
-- **Ngày chạy:** 29/10/2026 (bổ sung nhóm API Bữa ăn, Công thức, cron & push)
-- **Phạm vi:** 6 endpoint Auth + 5 endpoint Tài khoản + 6 endpoint Nhóm + 4 endpoint Danh mục + 4 endpoint Đơn vị + 5 endpoint Thực phẩm + 5 endpoint Tủ lạnh + 8 endpoint Đi chợ + 5 endpoint Bữa ăn + 4 endpoint Công thức (`server/src/routes/user.route.js`, `group.route.js`, `admin.route.js`, `food.route.js`, `fridge.route.js`, `shopping.route.js`, `meal.route.js`, `recipe.route.js`) + endpoint health + rate limit
+- **Ngày chạy:** 29/10/2026 (bổ sung nhóm API Báo cáo)
+- **Phạm vi:** 6 endpoint Auth + 5 endpoint Tài khoản + 6 endpoint Nhóm + 4 endpoint Danh mục + 4 endpoint Đơn vị + 5 endpoint Thực phẩm + 5 endpoint Tủ lạnh + 8 endpoint Đi chợ + 5 endpoint Bữa ăn + 4 endpoint Công thức + 5 endpoint Báo cáo (`server/src/routes/user.route.js`, `group.route.js`, `admin.route.js`, `food.route.js`, `fridge.route.js`, `shopping.route.js`, `meal.route.js`, `recipe.route.js`, `report.route.js`) + endpoint health + rate limit
 - **Công cụ:** Jest 30.5.2, Supertest 7.3.1, mongodb-memory-server 11.3.0
 - **Môi trường:** Windows, Node.js v24.11.0, MongoDB in-memory 8.2.6
-- **Kết quả:** **418/418 test PASS**, 13 test suite, ~41 giây (sau khi binary Mongo đã tải sẵn)
+- **Kết quả:** **442/442 test PASS**, 14 test suite, ~97 giây (sau khi binary Mongo đã tải sẵn)
 
 ## Cách chạy
 
@@ -26,6 +26,7 @@ Cấu hình: [`server/jest.config.js`](../server/jest.config.js), biến môi tr
 [`server/tests/shopping.test.js`](../server/tests/shopping.test.js),
 [`server/tests/meal.test.js`](../server/tests/meal.test.js),
 [`server/tests/recipe.test.js`](../server/tests/recipe.test.js),
+[`server/tests/report.test.js`](../server/tests/report.test.js),
 [`server/tests/push-notification.test.js`](../server/tests/push-notification.test.js),
 [`server/tests/expiry-checker.test.js`](../server/tests/expiry-checker.test.js) và
 [`server/tests/rate-limit.test.js`](../server/tests/rate-limit.test.js).
@@ -35,7 +36,7 @@ Cấu hình: [`server/jest.config.js`](../server/jest.config.js), biến môi tr
 - Dùng **MongoDB in-memory** nên không chạm vào DB thật, không cần `.env`, chạy được trên CI.
 - **Mock `utils/email.js`** — không gửi email thật; mã 6 số lấy từ `mock.calls` để test luồng verify.
 - `BCRYPT_ROUNDS=4` cho nhanh; JWT secret cố định trong `setup-env.js`.
-- `User.deleteMany({})` + `Group.deleteMany({})` + `Category.deleteMany({})` + `Unit.deleteMany({})` + `Food.deleteMany({})` + `FridgeItem.deleteMany({})` + `ShoppingList.deleteMany({})` + `Task.deleteMany({})` + `MealPlan.deleteMany({})` + `Recipe.deleteMany({})` trước mỗi test → các test độc lập, không phụ thuộc thứ tự.
+- `User.deleteMany({})` + `Group.deleteMany({})` + `Category.deleteMany({})` + `Unit.deleteMany({})` + `Food.deleteMany({})` + `FridgeItem.deleteMany({})` + `FridgeEvent.deleteMany({})` + `ShoppingList.deleteMany({})` + `Task.deleteMany({})` + `MealPlan.deleteMany({})` + `Recipe.deleteMany({})` trước mỗi test → các test độc lập, không phụ thuộc thứ tự.
 - Rate limit tắt mặc định trong bộ test chức năng (`AUTH_RATE_LIMIT_MAX=0`), có test riêng với ngưỡng thấp.
 
 ## Kết quả theo endpoint
@@ -855,6 +856,62 @@ Ghi chú nhóm Công thức:
 | P17 | Gửi thất bại | Giữ `isNotified = false`, đếm `itemsFailed` | PASS |
 | P18 | Chạy lần hai | Không gửi lại mục đã nhắc | PASS |
 | P19 | Không có mục nào | Không gọi Expo, summary toàn 0 | PASS |
+
+### Nhóm API Báo cáo (`tests/report.test.js`) — 24/24
+
+#### Xác thực & khoảng thời gian (7/7)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| R1 | Không có token | 401 / `00006` | PASS |
+| R2 | Người dùng chưa vào nhóm | 403 / `00385` | PASS |
+| R3 | `from` sai định dạng (`2026/01/01`) | 400 / `00386` | PASS |
+| R4 | Ngày không tồn tại (`2026-02-31`) | 400 / `00386` | PASS |
+| R5 | `from` > `to` | 400 / `00386` | PASS |
+| R6 | Khoảng dài hơn 366 ngày | 400 / `00386` | PASS |
+| R7 | Không truyền `from` / `to` | Mặc định 30 ngày, `to` = hôm nay theo giờ Việt Nam | PASS |
+
+#### `GET /report/shopping` — mua sắm (8/8)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| R8 | Chưa có dữ liệu | Summary toàn 0, chuỗi 30 ngày, mảng gộp rỗng | PASS |
+| R9 | 1 danh sách + 2 món, tick 1 | `lists=1`, `items=2`, `completedItems=1`, `completionRate=0.5` | PASS |
+| R10 | Chuỗi theo ngày | Hôm nay `lists=1`, `itemsCreated=2`, `itemsCompleted=1` | PASS |
+| R11 | Gộp theo danh mục / người được giao | Đúng danh mục thực phẩm và username được giao | PASS |
+| R12 | Dữ liệu của nhóm khác | Không lẫn sang báo cáo nhóm mình | PASS |
+| R13 | Khoảng thời gian trong quá khứ | Không tính dữ liệu hôm nay | PASS |
+| R14 | Tick / bỏ tick | `Task.completedAt` được đặt rồi xoá về `null` | PASS |
+
+#### `GET /report/consumption` — tiêu thụ (3/3)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| R15 | Xoá mục còn hạn, không gửi `reason` | Ghi `FridgeEvent(action=consumed)`, báo cáo đúng số lượng / đơn vị / danh mục | PASS |
+| R16 | Xoá mục đã hết hạn | Không nằm trong báo cáo tiêu thụ | PASS |
+| R17 | Sự kiện của nhóm khác | Không lẫn sang báo cáo nhóm mình | PASS |
+
+#### `GET /report/waste` — lãng phí (4/4)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| R18 | Xoá mục hết hạn | `items=1`, `quantity=2`, `byReason=expired`, `wasteRate=1` | PASS |
+| R19 | Vừa tiêu thụ vừa bỏ đi | `wasteRate = 2 / (2 + 2) = 0.5` | PASS |
+| R20 | Client gửi `reason=consumed` cho mục quá hạn | Ưu tiên lý do client, không tính vào lãng phí | PASS |
+| R21 | `reason` không hợp lệ | 400 / `00226` | PASS |
+
+#### `GET /report/fridge` — ảnh chụp tủ lạnh (2/2)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| R22 | 3 mục: hôm nay / quá hạn / tương lai | `totalItems=3`, `totalQuantity=7`, `expiringSoon=1`, `expired=1`; trạng thái `expiringSoon` / `expired` / `fresh`; gộp theo vị trí | PASS |
+| R23 | Tủ của nhóm khác | Không lẫn sang báo cáo nhóm mình | PASS |
+
+#### `GET /report/overview` — tổng hợp (1/1)
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| R24 | Có dữ liệu mua sắm + tiêu thụ | Trả đủ `range`, `shopping`, `consumption`, `waste`, `fridge` với số liệu khớp báo cáo riêng | PASS |
 
 ## 4 vấn đề đã khắc phục
 

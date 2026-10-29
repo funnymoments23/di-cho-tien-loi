@@ -65,6 +65,9 @@ router.delete(
   '/',
   auth,
   validate(deleteFridgeItemSchema, {
+    byField: {
+      reason: RC.FRIDGE_DELETE_INVALID_REASON, // 00226
+    },
     fallback: RC.FRIDGE_DELETE_MISSING_FOOD_NAME, // 00217
   }),
   fridgeController.deleteFridgeItem
