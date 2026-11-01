@@ -1,0 +1,14 @@
+services:
+  api:
+    build:
+      context: ./server
+    image: di-cho-tien-loi-api:latest
+    container_name: dichotienloi-api
+    env_file:
+      - ./server/.env
+    environment:
+      NODE_ENV: production
+    ports:
+      - "5001:5001"
+    restart: unless-stopped
+    init: true
