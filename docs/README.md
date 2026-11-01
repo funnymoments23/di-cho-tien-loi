@@ -147,7 +147,9 @@ di-cho-tien-loi/
 
 ### Chưa làm
 
-- Ứng dụng mobile và trang admin.
+- Ứng dụng mobile và trang admin web.
+- Deploy backend lên Render/Railway và cấu hình biến môi trường production (đặc biệt `SMTP_*`).
+- Postman collection dùng chung trong repo.
 
 ### Chạy server
 

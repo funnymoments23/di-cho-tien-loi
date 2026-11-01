@@ -1,0 +1,4783 @@
+{
+  "info": {
+    "_postman_id": "0877e408-bf7b-4915-b7af-f385cac21acc",
+    "name": "Đi chợ tiện lợi — API",
+    "description": "Bộ Postman collection cho backend \"Đi chợ tiện lợi\" (Express + MongoDB).\n\nCách dùng:\n1. Import cả file collection và file environment.\n2. Chọn environment \"Đi chợ tiện lợi — Local\", sửa `baseUrl` cho khớp PORT trong server/.env (mặc định 5001).\n3. Sửa `email` / `password` thành tài khoản đã xác minh email, chạy \"Đăng nhập\" — token tự lưu vào biến.\n4. Chạy lần lượt theo thư mục 00 → 10; các request tạo mới tự lưu id vào biến cho request sau.\n\nQuy ước response: { code, message, data }. Mã thành công/lỗi ghi trong phần mô tả từng request.\nTài liệu chi tiết: docs/02-GOP-Y-DAC-TA-API.md",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5001/it4788"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "refreshToken",
+      "value": ""
+    },
+    {
+      "key": "verificationToken",
+      "value": ""
+    },
+    {
+      "key": "resetToken",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "00. Health",
+      "description": "Kiểm tra server còn sống. Không cần đăng nhập.",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "GET /health — trả 00000 khi server chạy. Dùng để kiểm tra baseUrl trước khi test các API khác.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01. Auth",
+      "description": "Đăng ký, xác minh email, đăng nhập và quản lý token. Chạy \"Login\" để tự lưu accessToken/refreshToken cho toàn bộ collection.",
+      "item": [
+        {
+          "name": "Đăng ký",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/user",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user"
+              ]
+            },
+            "description": "POST /user — tạo tài khoản, server gửi mã 6 số qua email. Thành công: 00035 (201).\nScript tự lưu `verificationToken` để dùng cho \"Xác minh email\".\nLỗi thường gặp: 00025 thiếu trường, 00026 email sai, 00027 mật khẩu sai, 00032 email đã tồn tại.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\",\n  \"name\": \"Nguyễn Văn A\",\n  \"language\": \"vi\",\n  \"timezone\": \"Asia/Ho_Chi_Minh\",\n  \"deviceId\": \"postman-device-01\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};",
+                  "",
+                  "if (body && body.data) setVar('verificationToken', body.data.verificationToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Gửi lại mã xác minh",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/user/send-verification-code",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user",
+                "send-verification-code"
+              ]
+            },
+            "description": "POST /user/send-verification-code — gửi lại mã xác minh. Thành công: 00048.\nNếu email đã xác minh, server trả 00058 và không gửi mail.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xác minh email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/user/verify-email",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user",
+                "verify-email"
+              ]
+            },
+            "description": "POST /user/verify-email — nhập mã 6 số trong email + verificationToken nhận lúc đăng ký. Thành công: 00058.\nLỗi: 00053 thiếu mã, 00054 mã sai/hết hạn, 00055 token sai/hết hạn.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{code}}\",\n  \"token\": \"{{verificationToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đăng nhập",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/user/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user",
+                "login"
+              ]
+            },
+            "description": "POST /user/login — trả { user, accessToken, refreshToken }. Thành công: 00047.\nScript tự lưu `accessToken`, `refreshToken`, `userId` cho các request sau.\nLỗi: 00042 không tìm thấy tài khoản, 00044 chưa xác minh email, 00045 sai mật khẩu, 00403 tài khoản bị khoá.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};",
+                  "",
+                  "if (body && body.data) {",
+                  "  setVar('accessToken', body.data.accessToken);",
+                  "  setVar('refreshToken', body.data.refreshToken);",
+                  "  if (body.data.user) setVar('userId', body.data.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Làm mới token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/user/refresh-token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user",
+                "refresh-token"
+              ]
+            },
+            "description": "POST /user/refresh-token — cấp cặp token mới (refresh token bị rotate). Lỗi: 00059 thiếu token, 00061/00062/00063 token không hợp lệ hoặc đã bị thu hồi.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};",
+                  "",
+                  "if (body && body.data) {",
+                  "  setVar('accessToken', body.data.accessToken);",
+                  "  setVar('refreshToken', body.data.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đăng xuất",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/user/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user",
+                "logout"
+              ]
+            },
+            "description": "POST /user/logout — thu hồi refresh token đang lưu. Cần Bearer token. Thành công: 00050; thiếu token: 00006."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Quên mật khẩu — gửi mã",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/user/forgot-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user",
+                "forgot-password"
+              ]
+            },
+            "description": "POST /user/forgot-password — gửi mã đặt lại mật khẩu, trả `resetToken`. Thành công: 00048.\nScript tự lưu `resetToken`. Server không tiết lộ email có tồn tại hay không.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};",
+                  "",
+                  "if (body && body.data) setVar('resetToken', body.data.resetToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đặt lại mật khẩu",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/user/reset-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user",
+                "reset-password"
+              ]
+            },
+            "description": "POST /user/reset-password — nhập mã + resetToken để đặt mật khẩu mới. Thành công: 00068.\nSau khi đổi, mọi refresh token cũ bị thu hồi nên phải đăng nhập lại.\nLỗi: 00053/00054/00067 mã sai, 00055 token sai, 00066 mật khẩu mới không hợp lệ.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{code}}\",\n  \"token\": \"{{resetToken}}\",\n  \"newPassword\": \"{{newPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02. Tài khoản",
+      "description": "Hồ sơ cá nhân của người đang đăng nhập.",
+      "item": [
+        {
+          "name": "Xem hồ sơ",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/user",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user"
+              ]
+            },
+            "description": "GET /user — thông tin của chính mình. Thành công: 00089. Thiếu token: 00006."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cập nhật hồ sơ",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/user",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user"
+              ]
+            },
+            "description": "PUT /user — sửa hồ sơ. Hỗ trợ JSON hoặc multipart/form-data với field `image` để upload ảnh.\nMuốn thử upload: tab Body → form-data → key `image` (type File) + các field text ở trên.\nLỗi: 00077 tên, 00078 giới tính, 00079 ngôn ngữ, 00080 ngày sinh, 00081 username.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Nguyễn Văn A\",\n  \"username\": \"{{username}}\",\n  \"gender\": \"male\",\n  \"birthday\": \"2000-01-01\",\n  \"language\": \"vi\",\n  \"timezone\": \"Asia/Ho_Chi_Minh\",\n  \"avatar\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Đổi mật khẩu",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/user/change-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user",
+                "change-password"
+              ]
+            },
+            "description": "POST /user/change-password — đổi mật khẩu khi đang đăng nhập. Lỗi: 00069 mật khẩu sai định dạng/sai mật khẩu cũ.\nĐổi xong token cũ bị vô hiệu hoá, cần đăng nhập lại rồi cập nhật biến `password`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"oldPassword\": \"{{password}}\",\n  \"newPassword\": \"{{newPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cập nhật device token",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/user/device-token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user",
+                "device-token"
+              ]
+            },
+            "description": "PUT /user/device-token — lưu Expo push token để nhận thông báo hết hạn. Thiếu trường: 00025.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceToken\": \"{{deviceToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xoá tài khoản",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/user",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user"
+              ]
+            },
+            "description": "DELETE /user — xoá tài khoản của chính mình (00092). Thao tác không hoàn tác được; nên chạy sau cùng."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03. Nhóm",
+      "description": "Tạo nhóm, xem thành viên, thêm/xoá thành viên. Nhiều API khác yêu cầu đã vào nhóm nên hãy chạy \"Tạo nhóm\" trước.",
+      "item": [
+        {
+          "name": "Tạo nhóm",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/user/group",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user",
+                "group"
+              ]
+            },
+            "description": "POST /user/group — người tạo trở thành trưởng nhóm. Thành công: 00095 (201).\nLỗi: 00093 đã ở trong nhóm, 00094 thiếu tên nhóm.\nScript tự lưu `groupId`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"groupName\": \"{{groupName}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};",
+                  "",
+                  "if (body && body.data) setVar('groupId', body.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xem nhóm và thành viên",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/user/group",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user",
+                "group"
+              ]
+            },
+            "description": "GET /user/group — thông tin nhóm + danh sách thành viên. Thành công: 00098; chưa vào nhóm: 00096."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xem thông tin nhóm",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/user/group/info",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user",
+                "group",
+                "info"
+              ]
+            },
+            "description": "GET /user/group/info — tên nhóm, trưởng nhóm, số thành viên, cờ `isAdmin`. Thành công: 00098."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Thêm thành viên",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/user/group/add",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user",
+                "group",
+                "add"
+              ]
+            },
+            "description": "POST /user/group/add — chỉ trưởng nhóm. Thành công: 00102.\nLỗi: 00100 thiếu username, 00101 không phải trưởng nhóm, 00103 không tìm thấy người dùng.\nUsername phải là tài khoản đã tồn tại và chưa thuộc nhóm.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{assignToUsername}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xoá thành viên (body)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/user/group",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user",
+                "group"
+              ]
+            },
+            "description": "DELETE /user/group — xoá thành viên bằng username trong body. Chỉ trưởng nhóm. Thành công: 00106.\nLỗi: 00104 không phải trưởng nhóm, 00107 thiếu username.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{assignToUsername}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xoá thành viên (path)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/user/group/{{assignToUsername}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user",
+                "group",
+                "{{assignToUsername}}"
+              ]
+            },
+            "description": "DELETE /user/group/:username — biến thể path param của API trên. Thành công: 00106."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tự rời nhóm",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/user/group/leave",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user",
+                "group",
+                "leave"
+              ]
+            },
+            "description": "POST /user/group/leave — thành viên tự rời nhóm; nếu trưởng nhóm rời thì quyền được chuyển cho người khác. Thành công: 00108."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04. Thực phẩm",
+      "description": "Danh mục thực phẩm của nhóm. Cần đã đăng nhập và đã vào nhóm.",
+      "item": [
+        {
+          "name": "Danh sách thực phẩm",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/food?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "food"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Trang (bỏ trống để nhận mảng, có page/limit để nhận { items, total, ... })"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Số phần tử mỗi trang, tối đa 100"
+                },
+                {
+                  "key": "keyword",
+                  "value": "{{keyword}}",
+                  "description": "Lọc theo tên (không phân biệt hoa thường)",
+                  "disabled": true
+                },
+                {
+                  "key": "categoryName",
+                  "value": "{{categoryName}}",
+                  "description": "Lọc theo tên danh mục",
+                  "disabled": true
+                },
+                {
+                  "key": "inFridge",
+                  "value": "true",
+                  "description": "true = đang có trong tủ, false = chưa có",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "GET /food — toàn bộ thực phẩm của nhóm, sắp theo tên. Thành công: 00188.\nBỏ page/limit thì `data` là mảng; gửi page/limit thì `data` là { items, total, page, limit, totalPages }.\nLỗi: 00185 chưa vào nhóm, 00410 phân trang không hợp lệ."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tìm thực phẩm",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/food/search?keyword={{keyword}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "food",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "keyword",
+                  "value": "{{keyword}}",
+                  "description": "Từ khoá trong tên"
+                },
+                {
+                  "key": "categoryName",
+                  "value": "{{categoryName}}",
+                  "description": "Tên danh mục",
+                  "disabled": true
+                },
+                {
+                  "key": "inFridge",
+                  "value": "true",
+                  "description": "Lọc theo đang có trong tủ",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Trang",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Số phần tử mỗi trang",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "GET /food/search — tìm theo keyword và/hoặc categoryName. Dùng chung mã thành công 00188 với GET /food."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tạo thực phẩm",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/food",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "food"
+              ]
+            },
+            "description": "POST /food — tạo thực phẩm cho nhóm. Thành công: 00160 (201).\nHỗ trợ JSON hoặc multipart/form-data (field file: `image`); `image` cũng có thể là URL.\nScript tự lưu `foodId`.\nLỗi: 00147 thiếu trường, 00148 tên sai, 00149/00155 danh mục không tồn tại, 00150/00153 đơn vị không tồn tại, 00151 trùng tên.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"foodName\": \"{{foodName}}\",\n  \"categoryName\": \"{{categoryName}}\",\n  \"unitName\": \"{{unitName}}\",\n  \"image\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};",
+                  "",
+                  "if (body && body.data) setVar('foodId', body.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cập nhật thực phẩm",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/food",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "food"
+              ]
+            },
+            "description": "PUT /food — `foodName` là tên hiện tại (định danh), các trường `new*` là giá trị mới. Thành công: 00178.\nLỗi: 00161 thiếu tên, 00162 tên sai, 00163 không có trường nào để sửa, 00166/00164/00165 giá trị mới không hợp lệ.\nScript cập nhật lại biến `foodName` theo tên mới để các request sau vẫn chạy đúng.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"foodName\": \"{{foodName}}\",\n  \"newName\": \"Thịt bò Úc\",\n  \"newCategory\": \"{{categoryName}}\",\n  \"newUnit\": \"{{unitName}}\",\n  \"image\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};",
+                  "",
+                  "if (body && body.data) setVar('foodName', body.data.name);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xoá thực phẩm (body)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/food",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "food"
+              ]
+            },
+            "description": "DELETE /food — xoá theo tên trong body. Thành công: 00184.\nLỗi: 00179 thiếu tên, 00180 không tìm thấy.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"foodName\": \"{{foodName}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xoá thực phẩm (path)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/food/{{foodId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "food",
+                "{{foodId}}"
+              ]
+            },
+            "description": "DELETE /food/:id — biến thể path param. Thành công: 00184."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05. Tủ lạnh",
+      "description": "Quản lý đồ trong tủ của nhóm. `useWithin` là hạn sử dụng (ISO date).",
+      "item": [
+        {
+          "name": "Danh sách đồ trong tủ",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/fridge?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "fridge"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Trang"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Số phần tử mỗi trang"
+                }
+              ]
+            },
+            "description": "GET /fridge — sắp theo hạn sử dụng gần nhất. Thành công: 00228; chưa vào nhóm: 00225."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xem một mục theo tên",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/fridge/item?foodName={{foodName}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "fridge",
+                "item"
+              ],
+              "query": [
+                {
+                  "key": "foodName",
+                  "value": "{{foodName}}",
+                  "description": "Tên thực phẩm cần xem"
+                }
+              ]
+            },
+            "description": "GET /fridge/item?foodName=... — thành công: 00237.\nLỗi: 00229 thiếu foodName, 00230 không tìm thấy thực phẩm, 00232 thực phẩm của nhóm khác, 00234 chưa có trong tủ."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Thêm vào tủ",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/fridge",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "fridge"
+              ]
+            },
+            "description": "POST /fridge — thêm thực phẩm đã có trong danh mục của nhóm. Thành công: 00202 (201).\nScript tự lưu `fridgeItemId`.\nLỗi: 00190/00194 không tìm thấy thực phẩm, 00191 hạn sai, 00192 số lượng sai, 00199 đã có trong tủ.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"foodName\": \"{{foodName}}\",\n  \"useWithin\": \"2026-12-31T00:00:00.000Z\",\n  \"quantity\": 1,\n  \"note\": \"Mua ở siêu thị\",\n  \"location\": \"Ngăn mát\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};",
+                  "",
+                  "if (body && body.data) setVar('fridgeItemId', body.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cập nhật mục trong tủ",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/fridge",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "fridge"
+              ]
+            },
+            "description": "PUT /fridge — sửa theo `itemId`. Thành công: 00216.\nLỗi: 00203 thiếu trường, 00204 thiếu itemId, 00205/00206/00207 giá trị mới không hợp lệ.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"{{fridgeItemId}}\",\n  \"newQuantity\": 2,\n  \"newUseWithin\": \"2027-01-15T00:00:00.000Z\",\n  \"newNote\": \"Đã chuyển sang ngăn đá\",\n  \"newLocation\": \"Ngăn đá\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xoá mục trong tủ (body)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/fridge",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "fridge"
+              ]
+            },
+            "description": "DELETE /fridge — xoá theo tên thực phẩm. `reason`: consumed | expired | discarded (bỏ trống thì server tự suy theo hạn). Thành công: 00224.\nLỗi: 00217 thiếu tên, 00226 reason sai.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"foodName\": \"{{foodName}}\",\n  \"reason\": \"consumed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xoá mục trong tủ (path)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/fridge/{{fridgeItemId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "fridge",
+                "{{fridgeItemId}}"
+              ]
+            },
+            "description": "DELETE /fridge/:itemId — biến thể path param. Thành công: 00224."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06. Đi chợ",
+      "description": "Danh sách đi chợ (shopping) và các món cần mua (task). Tạo/xoá danh sách và món chỉ trưởng nhóm; tick \"đã mua\" thì mọi thành viên.",
+      "item": [
+        {
+          "name": "Danh sách đi chợ",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/shopping?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shopping"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Trang"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Số phần tử mỗi trang"
+                }
+              ]
+            },
+            "description": "GET /shopping — danh sách đi chợ kèm món. Thành công: 00292; chưa vào nhóm: 00288."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Danh sách đi chợ (task)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/shopping/task?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shopping",
+                "task"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Trang"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Số phần tử mỗi trang"
+                }
+              ]
+            },
+            "description": "GET /shopping/task — cùng dữ liệu với GET /shopping. Thành công: 00292."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tạo danh sách đi chợ",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shopping",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shopping"
+              ]
+            },
+            "description": "POST /shopping — chỉ trưởng nhóm; giao danh sách cho một thành viên. Thành công: 00249 (201).\nScript tự lưu `listId`.\nLỗi: 00238 thiếu trường, 00239 thiếu tên, 00240 thiếu người nhận, 00241 note sai, 00242 date sai, 00243 không phải trưởng nhóm, 00245/00246 người nhận không hợp lệ.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{listName}}\",\n  \"assignToUsername\": \"{{assignToUsername}}\",\n  \"note\": \"Mua trước 9h sáng\",\n  \"date\": \"2026-12-20T00:00:00.000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};",
+                  "",
+                  "if (body && body.data) setVar('listId', body.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cập nhật danh sách",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shopping",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shopping"
+              ]
+            },
+            "description": "PUT /shopping — sửa theo `listId`. Thành công: 00266.\nLỗi: 00250 thiếu trường, 00251 thiếu listId, 00253/00254/00255/00256 giá trị mới không hợp lệ.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listId\": \"{{listId}}\",\n  \"newName\": \"Đi chợ cuối tuần (đã sửa)\",\n  \"newAssignToUsername\": \"{{assignToUsername}}\",\n  \"newNote\": \"Ghé thêm chợ đầu mối\",\n  \"newDate\": \"2026-12-21T00:00:00.000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xoá danh sách (body)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shopping",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shopping"
+              ]
+            },
+            "description": "DELETE /shopping — xoá theo listId trong body. Thành công: 00275.\nLỗi: 00267 thiếu trường, 00268 thiếu listId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listId\": \"{{listId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xoá danh sách (path)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/shopping/{{listId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shopping",
+                "{{listId}}"
+              ]
+            },
+            "description": "DELETE /shopping/:listId — biến thể path param. Thành công: 00275."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Thêm món vào danh sách",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shopping/task",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shopping",
+                "task"
+              ]
+            },
+            "description": "POST /shopping/task — thêm mảng món vào danh sách (phải là thực phẩm của nhóm). Thành công: 00287.\nScript tự lưu `taskId` của món đầu tiên.\nLỗi: 00276 thiếu trường, 00277 thiếu listId, 00278 thiếu tasks, 00279 tasks sai, 0028x thực phẩm không tồn tại/đã có trong danh sách.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listId\": \"{{listId}}\",\n  \"tasks\": [\n    {\n      \"foodName\": \"{{foodName}}\",\n      \"quantity\": 2\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};",
+                  "",
+                  "if (body && Array.isArray(body.data) && body.data[0]) setVar('taskId', body.data[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cập nhật món",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shopping/task",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shopping",
+                "task"
+              ]
+            },
+            "description": "PUT /shopping/task — sửa tên món và/hoặc số lượng, cần ít nhất một trường mới. Thành công: 00312.\nLỗi: 00300 thiếu trường, 00301 thiếu taskId, 00302 không có gì để sửa, 00303/00304 giá trị mới sai, 00306 không tìm thấy.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"taskId\": \"{{taskId}}\",\n  \"newFoodName\": \"{{foodName}}\",\n  \"newQuantity\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tick đã mua",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shopping/task/{{taskId}}/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shopping",
+                "task",
+                "{{taskId}}",
+                "complete"
+              ]
+            },
+            "description": "PATCH /shopping/task/:taskId/complete — đánh dấu đã mua xong (mọi thành viên trong nhóm). Thành công: 00312.\nGửi isCompleted=false để bỏ tick. Lỗi: 00300 thiếu isCompleted, 00301/00306 taskId sai/không tồn tại.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isCompleted\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xoá món (body)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shopping/task",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shopping",
+                "task"
+              ]
+            },
+            "description": "DELETE /shopping/task — xoá món theo taskId trong body. Thành công: 00299.\nLỗi: 00293 thiếu trường, 00294 thiếu taskId, 00296 không tìm thấy.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"taskId\": \"{{taskId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xoá món (path)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/shopping/task/{{taskId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shopping",
+                "task",
+                "{{taskId}}"
+              ]
+            },
+            "description": "DELETE /shopping/task/:taskId — biến thể path param. Thành công: 00299."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07. Bữa ăn",
+      "description": "Lịch bữa ăn của nhóm. Tạo/sửa/xoá chỉ trưởng nhóm.",
+      "item": [
+        {
+          "name": "Lịch bữa ăn",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/meal",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "meal"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-12-20",
+                  "description": "Một ngày (YYYY-MM-DD)",
+                  "disabled": true
+                },
+                {
+                  "key": "from",
+                  "value": "2026-12-15",
+                  "description": "Từ ngày (YYYY-MM-DD)",
+                  "disabled": true
+                },
+                {
+                  "key": "to",
+                  "value": "2026-12-21",
+                  "description": "Đến ngày (YYYY-MM-DD)",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Trang",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Số phần tử mỗi trang",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "GET /meal — lịch bữa ăn, lọc theo ?date= hoặc ?from=&to=. Thành công: 00348; chưa vào nhóm: 00345."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Gợi ý món từ tủ",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/meal/suggestion?limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "meal",
+                "suggestion"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Số gợi ý tối đa, mặc định 20 (tối đa 100)"
+                }
+              ]
+            },
+            "description": "GET /meal/suggestion — gợi ý công thức từ thực phẩm sắp hết hạn trong tủ, ưu tiên hạn gần. Thành công: 00348."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xếp món vào bữa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/meal",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "meal"
+              ]
+            },
+            "description": "POST /meal — chỉ trưởng nhóm; `name`: sáng | trưa | tối. Thành công: 00322 (201).\nScript tự lưu `mealPlanId`.\nLỗi: 00313 thiếu trường, 00314 foodName sai, 00315 timestamp sai, 00316 tên bữa sai, 00317 không tìm thấy món, 00319 không phải trưởng nhóm.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"foodName\": \"{{foodName}}\",\n  \"timestamp\": \"2026-12-20T12:00:00.000Z\",\n  \"name\": \"trưa\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};",
+                  "",
+                  "if (body && body.data) setVar('mealPlanId', body.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cập nhật kế hoạch bữa",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/meal",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "meal"
+              ]
+            },
+            "description": "PUT /meal — sửa theo planId. Thành công: 00344.\nLỗi: 00331 thiếu trường, 00332 thiếu planId, 00333 không có gì để sửa, 00334/00335/00336 giá trị mới sai, 00339 không phải trưởng nhóm.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planId\": \"{{mealPlanId}}\",\n  \"newFoodName\": \"{{foodName}}\",\n  \"newTimestamp\": \"2026-12-20T18:00:00.000Z\",\n  \"newName\": \"tối\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xoá kế hoạch (body)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/meal",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "meal"
+              ]
+            },
+            "description": "DELETE /meal — xoá theo planId trong body. Thành công: 00330.\nLỗi: 00323 thiếu planId, 00324 planId sai.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planId\": \"{{mealPlanId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xoá kế hoạch (path)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/meal/{{mealPlanId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "meal",
+                "{{mealPlanId}}"
+              ]
+            },
+            "description": "DELETE /meal/:planId — biến thể path param. Thành công: 00330."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "08. Công thức",
+      "description": "Công thức nấu ăn gắn với một thực phẩm của nhóm.",
+      "item": [
+        {
+          "name": "Danh sách công thức",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/recipe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "recipe"
+              ],
+              "query": [
+                {
+                  "key": "foodName",
+                  "value": "{{foodName}}",
+                  "description": "Lọc theo tên thực phẩm",
+                  "disabled": true
+                },
+                {
+                  "key": "foodId",
+                  "value": "{{foodId}}",
+                  "description": "Lọc theo id thực phẩm",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Trang",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Số phần tử mỗi trang",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "GET /recipe — công thức của nhóm. Thành công: 00378; chưa vào nhóm: 00096."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tạo công thức",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/recipe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "recipe"
+              ]
+            },
+            "description": "POST /recipe — thành công: 00357 (201). Script tự lưu `recipeId`.\nLỗi: 00349 thiếu trường, 00350 foodName sai/không tồn tại, 00351 tên, 00352 mô tả, 00353 htmlContent.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"foodName\": \"{{foodName}}\",\n  \"name\": \"Bò xào hành tây\",\n  \"description\": \"Món nhanh cho bữa tối, 20 phút.\",\n  \"htmlContent\": \"<h3>Nguyên liệu</h3><ul><li>Thịt bò 300g</li><li>Hành tây 1 củ</li></ul>\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};",
+                  "",
+                  "if (body && body.data) setVar('recipeId', body.data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cập nhật công thức",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/recipe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "recipe"
+              ]
+            },
+            "description": "PUT /recipe — sửa theo recipeId. Thành công: 00370.\nLỗi: 00358 thiếu trường, 00359 thiếu recipeId, 00360 không có gì để sửa, 00361–00364 giá trị mới sai, 00365 không tìm thấy/khác nhóm.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipeId\": \"{{recipeId}}\",\n  \"newName\": \"Bò xào hành tây (bản mới)\",\n  \"newDescription\": \"Thêm tiêu đen.\",\n  \"newHtmlContent\": \"<h3>Nguyên liệu</h3><p>Thịt bò, hành tây, tiêu đen.</p>\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xoá công thức (body)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/recipe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "recipe"
+              ]
+            },
+            "description": "DELETE /recipe — xoá theo recipeId trong body. Thành công: 00376.\nLỗi: 00371 thiếu recipeId, 00372 recipeId sai.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipeId\": \"{{recipeId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Xoá công thức (path)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/recipe/{{recipeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "recipe",
+                "{{recipeId}}"
+              ]
+            },
+            "description": "DELETE /recipe/:recipeId — biến thể path param. Thành công: 00376."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "09. Báo cáo",
+      "description": "Thống kê mua sắm / tiêu thụ / lãng phí / tủ lạnh theo khoảng ngày (YYYY-MM-DD, giờ Việt Nam). Mặc định 30 ngày gần nhất, tối đa 366 ngày.",
+      "item": [
+        {
+          "name": "Tổng hợp",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/report/overview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "report",
+                "overview"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2026-11-01",
+                  "description": "Từ ngày (YYYY-MM-DD)",
+                  "disabled": true
+                },
+                {
+                  "key": "to",
+                  "value": "2026-11-30",
+                  "description": "Đến ngày (YYYY-MM-DD)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "GET /report/overview — gộp 4 khối shopping / consumption / waste / fridge. Thành công: 00380.\nLỗi: 00385 chưa vào nhóm, 00386 khoảng ngày sai."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Báo cáo mua sắm",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/report/shopping",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "report",
+                "shopping"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2026-11-01",
+                  "description": "Từ ngày",
+                  "disabled": true
+                },
+                {
+                  "key": "to",
+                  "value": "2026-11-30",
+                  "description": "Đến ngày",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "GET /report/shopping — thành công: 00381."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Báo cáo tiêu thụ",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/report/consumption",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "report",
+                "consumption"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2026-11-01",
+                  "description": "Từ ngày",
+                  "disabled": true
+                },
+                {
+                  "key": "to",
+                  "value": "2026-11-30",
+                  "description": "Đến ngày",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "GET /report/consumption — thành công: 00382."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Báo cáo lãng phí",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/report/waste",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "report",
+                "waste"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2026-11-01",
+                  "description": "Từ ngày",
+                  "disabled": true
+                },
+                {
+                  "key": "to",
+                  "value": "2026-11-30",
+                  "description": "Đến ngày",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "GET /report/waste — thành công: 00383."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ảnh chụp tủ lạnh",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/report/fridge",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "report",
+                "fridge"
+              ]
+            },
+            "description": "GET /report/fridge — tình trạng tủ hiện tại, không lọc theo thời gian. Thành công: 00384."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "10. Quản trị",
+      "description": "API chỉ dành cho tài khoản role=admin (người dùng thường nhận 00017). Tạo admin bằng: node scripts/seed-admin.js",
+      "item": [
+        {
+          "name": "Danh mục",
+          "description": "Danh mục thực phẩm. GET mở cho mọi tài khoản đã đăng nhập; thêm/sửa/xoá chỉ admin.",
+          "item": [
+            {
+              "name": "Danh sách danh mục",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/category",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "category"
+                  ]
+                },
+                "description": "GET /admin/category — mọi tài khoản đã đăng nhập. Thành công: 00129."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('HTTP status hợp lệ', function () {",
+                      "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                      "});",
+                      "",
+                      "let body = null;",
+                      "try { body = pm.response.json(); } catch (e) {}",
+                      "",
+                      "pm.test('Response có dạng { code, message, data }', function () {",
+                      "  pm.expect(body).to.be.an('object');",
+                      "  pm.expect(body).to.have.property('code');",
+                      "  pm.expect(body).to.have.property('message');",
+                      "  pm.expect(body).to.have.property('data');",
+                      "});",
+                      "",
+                      "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                      "const setVar = function (key, value) {",
+                      "  if (value === undefined || value === null || value === '') return;",
+                      "  pm.collectionVariables.set(key, value);",
+                      "  if (pm.environment.name) pm.environment.set(key, value);",
+                      "};"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Tạo danh mục",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/category",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "category"
+                  ]
+                },
+                "description": "POST /admin/category — admin. Thành công: 00135 (201).\nLỗi: 00017 không phải admin, 00131 thiếu tên, 00132 tên sai, 00133 trùng tên.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"{{categoryName}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('HTTP status hợp lệ', function () {",
+                      "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                      "});",
+                      "",
+                      "let body = null;",
+                      "try { body = pm.response.json(); } catch (e) {}",
+                      "",
+                      "pm.test('Response có dạng { code, message, data }', function () {",
+                      "  pm.expect(body).to.be.an('object');",
+                      "  pm.expect(body).to.have.property('code');",
+                      "  pm.expect(body).to.have.property('message');",
+                      "  pm.expect(body).to.have.property('data');",
+                      "});",
+                      "",
+                      "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                      "const setVar = function (key, value) {",
+                      "  if (value === undefined || value === null || value === '') return;",
+                      "  pm.collectionVariables.set(key, value);",
+                      "  if (pm.environment.name) pm.environment.set(key, value);",
+                      "};"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Đổi tên danh mục",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/category",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "category"
+                  ]
+                },
+                "description": "PUT /admin/category — admin. Thành công: 00141.\nLỗi: 00136 thiếu trường, 00137/00138/00139 giá trị sai, 00140 không tìm thấy.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"{{categoryName}}\",\n  \"newName\": \"Thịt & hải sản\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('HTTP status hợp lệ', function () {",
+                      "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                      "});",
+                      "",
+                      "let body = null;",
+                      "try { body = pm.response.json(); } catch (e) {}",
+                      "",
+                      "pm.test('Response có dạng { code, message, data }', function () {",
+                      "  pm.expect(body).to.be.an('object');",
+                      "  pm.expect(body).to.have.property('code');",
+                      "  pm.expect(body).to.have.property('message');",
+                      "  pm.expect(body).to.have.property('data');",
+                      "});",
+                      "",
+                      "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                      "const setVar = function (key, value) {",
+                      "  if (value === undefined || value === null || value === '') return;",
+                      "  pm.collectionVariables.set(key, value);",
+                      "  if (pm.environment.name) pm.environment.set(key, value);",
+                      "};"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Xoá danh mục (body)",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/category",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "category"
+                  ]
+                },
+                "description": "DELETE /admin/category — admin. Thành công: 00146.\nLỗi: 00142 thiếu tên, 00143 không tìm thấy, 00144 đang được dùng bởi thực phẩm.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"{{categoryName}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('HTTP status hợp lệ', function () {",
+                      "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                      "});",
+                      "",
+                      "let body = null;",
+                      "try { body = pm.response.json(); } catch (e) {}",
+                      "",
+                      "pm.test('Response có dạng { code, message, data }', function () {",
+                      "  pm.expect(body).to.be.an('object');",
+                      "  pm.expect(body).to.have.property('code');",
+                      "  pm.expect(body).to.have.property('message');",
+                      "  pm.expect(body).to.have.property('data');",
+                      "});",
+                      "",
+                      "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                      "const setVar = function (key, value) {",
+                      "  if (value === undefined || value === null || value === '') return;",
+                      "  pm.collectionVariables.set(key, value);",
+                      "  if (pm.environment.name) pm.environment.set(key, value);",
+                      "};"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Xoá danh mục (path)",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/category/{{categoryName}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "category",
+                    "{{categoryName}}"
+                  ]
+                },
+                "description": "DELETE /admin/category/:name — biến thể path param. Thành công: 00146."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('HTTP status hợp lệ', function () {",
+                      "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                      "});",
+                      "",
+                      "let body = null;",
+                      "try { body = pm.response.json(); } catch (e) {}",
+                      "",
+                      "pm.test('Response có dạng { code, message, data }', function () {",
+                      "  pm.expect(body).to.be.an('object');",
+                      "  pm.expect(body).to.have.property('code');",
+                      "  pm.expect(body).to.have.property('message');",
+                      "  pm.expect(body).to.have.property('data');",
+                      "});",
+                      "",
+                      "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                      "const setVar = function (key, value) {",
+                      "  if (value === undefined || value === null || value === '') return;",
+                      "  pm.collectionVariables.set(key, value);",
+                      "  if (pm.environment.name) pm.environment.set(key, value);",
+                      "};"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Đơn vị đo",
+          "description": "Đơn vị đo (kg, lít, ...). GET mở cho mọi tài khoản đã đăng nhập; thêm/sửa/xoá chỉ admin.",
+          "item": [
+            {
+              "name": "Danh sách đơn vị",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/unit",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "unit"
+                  ]
+                },
+                "description": "GET /admin/unit — thành công: 00110."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('HTTP status hợp lệ', function () {",
+                      "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                      "});",
+                      "",
+                      "let body = null;",
+                      "try { body = pm.response.json(); } catch (e) {}",
+                      "",
+                      "pm.test('Response có dạng { code, message, data }', function () {",
+                      "  pm.expect(body).to.be.an('object');",
+                      "  pm.expect(body).to.have.property('code');",
+                      "  pm.expect(body).to.have.property('message');",
+                      "  pm.expect(body).to.have.property('data');",
+                      "});",
+                      "",
+                      "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                      "const setVar = function (key, value) {",
+                      "  if (value === undefined || value === null || value === '') return;",
+                      "  pm.collectionVariables.set(key, value);",
+                      "  if (pm.environment.name) pm.environment.set(key, value);",
+                      "};"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Tạo đơn vị",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/unit",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "unit"
+                  ]
+                },
+                "description": "POST /admin/unit — admin. Thành công: 00116 (201). Lỗi: 00112 thiếu tên, 00113 tên sai, 00114 trùng tên.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"{{unitName}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('HTTP status hợp lệ', function () {",
+                      "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                      "});",
+                      "",
+                      "let body = null;",
+                      "try { body = pm.response.json(); } catch (e) {}",
+                      "",
+                      "pm.test('Response có dạng { code, message, data }', function () {",
+                      "  pm.expect(body).to.be.an('object');",
+                      "  pm.expect(body).to.have.property('code');",
+                      "  pm.expect(body).to.have.property('message');",
+                      "  pm.expect(body).to.have.property('data');",
+                      "});",
+                      "",
+                      "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                      "const setVar = function (key, value) {",
+                      "  if (value === undefined || value === null || value === '') return;",
+                      "  pm.collectionVariables.set(key, value);",
+                      "  if (pm.environment.name) pm.environment.set(key, value);",
+                      "};"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Đổi tên đơn vị",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/unit",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "unit"
+                  ]
+                },
+                "description": "PUT /admin/unit — admin. Thành công: 00122; lỗi 00117–00121.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"{{unitName}}\",\n  \"newName\": \"kg\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('HTTP status hợp lệ', function () {",
+                      "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                      "});",
+                      "",
+                      "let body = null;",
+                      "try { body = pm.response.json(); } catch (e) {}",
+                      "",
+                      "pm.test('Response có dạng { code, message, data }', function () {",
+                      "  pm.expect(body).to.be.an('object');",
+                      "  pm.expect(body).to.have.property('code');",
+                      "  pm.expect(body).to.have.property('message');",
+                      "  pm.expect(body).to.have.property('data');",
+                      "});",
+                      "",
+                      "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                      "const setVar = function (key, value) {",
+                      "  if (value === undefined || value === null || value === '') return;",
+                      "  pm.collectionVariables.set(key, value);",
+                      "  if (pm.environment.name) pm.environment.set(key, value);",
+                      "};"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Xoá đơn vị (body)",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/unit",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "unit"
+                  ]
+                },
+                "description": "DELETE /admin/unit — admin. Thành công: 00128. Lỗi: 00123 thiếu tên, 00124 không tìm thấy, 00125 đang được dùng.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"{{unitName}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('HTTP status hợp lệ', function () {",
+                      "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                      "});",
+                      "",
+                      "let body = null;",
+                      "try { body = pm.response.json(); } catch (e) {}",
+                      "",
+                      "pm.test('Response có dạng { code, message, data }', function () {",
+                      "  pm.expect(body).to.be.an('object');",
+                      "  pm.expect(body).to.have.property('code');",
+                      "  pm.expect(body).to.have.property('message');",
+                      "  pm.expect(body).to.have.property('data');",
+                      "});",
+                      "",
+                      "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                      "const setVar = function (key, value) {",
+                      "  if (value === undefined || value === null || value === '') return;",
+                      "  pm.collectionVariables.set(key, value);",
+                      "  if (pm.environment.name) pm.environment.set(key, value);",
+                      "};"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Xoá đơn vị (path)",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/unit/{{unitName}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "unit",
+                    "{{unitName}}"
+                  ]
+                },
+                "description": "DELETE /admin/unit/:name — biến thể path param. Thành công: 00128."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('HTTP status hợp lệ', function () {",
+                      "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                      "});",
+                      "",
+                      "let body = null;",
+                      "try { body = pm.response.json(); } catch (e) {}",
+                      "",
+                      "pm.test('Response có dạng { code, message, data }', function () {",
+                      "  pm.expect(body).to.be.an('object');",
+                      "  pm.expect(body).to.have.property('code');",
+                      "  pm.expect(body).to.have.property('message');",
+                      "  pm.expect(body).to.have.property('data');",
+                      "});",
+                      "",
+                      "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                      "const setVar = function (key, value) {",
+                      "  if (value === undefined || value === null || value === '') return;",
+                      "  pm.collectionVariables.set(key, value);",
+                      "  if (pm.environment.name) pm.environment.set(key, value);",
+                      "};"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Nhật ký hệ thống",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/logs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "logs"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "CREATE",
+                  "description": "CREATE | UPDATE | DELETE",
+                  "disabled": true
+                },
+                {
+                  "key": "entity",
+                  "value": "Food",
+                  "description": "Tên entity",
+                  "disabled": true
+                },
+                {
+                  "key": "userId",
+                  "value": "{{userId}}",
+                  "description": "ObjectId người thao tác",
+                  "disabled": true
+                },
+                {
+                  "key": "groupId",
+                  "value": "{{groupId}}",
+                  "description": "ObjectId nhóm",
+                  "disabled": true
+                },
+                {
+                  "key": "from",
+                  "value": "2026-11-01",
+                  "description": "Từ ngày YYYY-MM-DD",
+                  "disabled": true
+                },
+                {
+                  "key": "to",
+                  "value": "2026-11-30",
+                  "description": "Đến ngày YYYY-MM-DD",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Trang",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Số phần tử mỗi trang",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "GET /admin/logs — admin xem nhật ký thao tác ghi/sửa/xoá. Thành công: 00109.\nLỗi: 00017 không phải admin, 00386 khoảng ngày sai."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP status hợp lệ', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                  "});",
+                  "",
+                  "let body = null;",
+                  "try { body = pm.response.json(); } catch (e) {}",
+                  "",
+                  "pm.test('Response có dạng { code, message, data }', function () {",
+                  "  pm.expect(body).to.be.an('object');",
+                  "  pm.expect(body).to.have.property('code');",
+                  "  pm.expect(body).to.have.property('message');",
+                  "  pm.expect(body).to.have.property('data');",
+                  "});",
+                  "",
+                  "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                  "const setVar = function (key, value) {",
+                  "  if (value === undefined || value === null || value === '') return;",
+                  "  pm.collectionVariables.set(key, value);",
+                  "  if (pm.environment.name) pm.environment.set(key, value);",
+                  "};"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Người dùng",
+          "description": "Quản trị tài khoản: xem, sửa, khoá/mở khoá, xoá. Tất cả yêu cầu role=admin.",
+          "item": [
+            {
+              "name": "Danh sách người dùng",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/user?page=1&limit=20",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "user"
+                  ],
+                  "query": [
+                    {
+                      "key": "keyword",
+                      "value": "nguyen",
+                      "description": "Tìm theo tên/email/username",
+                      "disabled": true
+                    },
+                    {
+                      "key": "role",
+                      "value": "user",
+                      "description": "user | admin",
+                      "disabled": true
+                    },
+                    {
+                      "key": "status",
+                      "value": "active",
+                      "description": "active | locked",
+                      "disabled": true
+                    },
+                    {
+                      "key": "isVerified",
+                      "value": "true",
+                      "description": "Đã xác minh email",
+                      "disabled": true
+                    },
+                    {
+                      "key": "groupId",
+                      "value": "{{groupId}}",
+                      "description": "ObjectId nhóm",
+                      "disabled": true
+                    },
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Trang"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Số phần tử mỗi trang"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "createdAt",
+                      "description": "createdAt | updatedAt | name | email | role",
+                      "disabled": true
+                    },
+                    {
+                      "key": "order",
+                      "value": "desc",
+                      "description": "asc | desc",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "GET /admin/user — danh sách + lọc + phân trang. Thành công: 00387."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('HTTP status hợp lệ', function () {",
+                      "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                      "});",
+                      "",
+                      "let body = null;",
+                      "try { body = pm.response.json(); } catch (e) {}",
+                      "",
+                      "pm.test('Response có dạng { code, message, data }', function () {",
+                      "  pm.expect(body).to.be.an('object');",
+                      "  pm.expect(body).to.have.property('code');",
+                      "  pm.expect(body).to.have.property('message');",
+                      "  pm.expect(body).to.have.property('data');",
+                      "});",
+                      "",
+                      "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                      "const setVar = function (key, value) {",
+                      "  if (value === undefined || value === null || value === '') return;",
+                      "  pm.collectionVariables.set(key, value);",
+                      "  if (pm.environment.name) pm.environment.set(key, value);",
+                      "};"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Chi tiết người dùng",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/user/{{userId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "user",
+                    "{{userId}}"
+                  ]
+                },
+                "description": "GET /admin/user/:id — thành công: 00388; không tìm thấy: 00392."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('HTTP status hợp lệ', function () {",
+                      "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                      "});",
+                      "",
+                      "let body = null;",
+                      "try { body = pm.response.json(); } catch (e) {}",
+                      "",
+                      "pm.test('Response có dạng { code, message, data }', function () {",
+                      "  pm.expect(body).to.be.an('object');",
+                      "  pm.expect(body).to.have.property('code');",
+                      "  pm.expect(body).to.have.property('message');",
+                      "  pm.expect(body).to.have.property('data');",
+                      "});",
+                      "",
+                      "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                      "const setVar = function (key, value) {",
+                      "  if (value === undefined || value === null || value === '') return;",
+                      "  pm.collectionVariables.set(key, value);",
+                      "  if (pm.environment.name) pm.environment.set(key, value);",
+                      "};"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Cập nhật người dùng",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/user/{{userId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "user",
+                    "{{userId}}"
+                  ]
+                },
+                "description": "PUT /admin/user/:id — sửa hồ sơ/quyền/xác minh. Thành công: 00389.\nLỗi: 00395 không có trường nào, 00396 giá trị không hợp lệ, 00026 email sai, 00077/00078/00079/00080/00081 giá trị sai.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Nguyễn Văn A\",\n  \"username\": \"{{username}}\",\n  \"gender\": \"male\",\n  \"language\": \"vi\",\n  \"timezone\": \"Asia/Ho_Chi_Minh\",\n  \"role\": \"user\",\n  \"isVerified\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('HTTP status hợp lệ', function () {",
+                      "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                      "});",
+                      "",
+                      "let body = null;",
+                      "try { body = pm.response.json(); } catch (e) {}",
+                      "",
+                      "pm.test('Response có dạng { code, message, data }', function () {",
+                      "  pm.expect(body).to.be.an('object');",
+                      "  pm.expect(body).to.have.property('code');",
+                      "  pm.expect(body).to.have.property('message');",
+                      "  pm.expect(body).to.have.property('data');",
+                      "});",
+                      "",
+                      "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                      "const setVar = function (key, value) {",
+                      "  if (value === undefined || value === null || value === '') return;",
+                      "  pm.collectionVariables.set(key, value);",
+                      "  if (pm.environment.name) pm.environment.set(key, value);",
+                      "};"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Khoá / mở khoá tài khoản",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/user/{{userId}}/status",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "user",
+                    "{{userId}}",
+                    "status"
+                  ]
+                },
+                "description": "PATCH /admin/user/:id/status — isActive=false để khoá, true để mở. Thành công: 00390.\nTài khoản bị khoá đăng nhập/refresh đều nhận 00403.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"isActive\": false\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('HTTP status hợp lệ', function () {",
+                      "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                      "});",
+                      "",
+                      "let body = null;",
+                      "try { body = pm.response.json(); } catch (e) {}",
+                      "",
+                      "pm.test('Response có dạng { code, message, data }', function () {",
+                      "  pm.expect(body).to.be.an('object');",
+                      "  pm.expect(body).to.have.property('code');",
+                      "  pm.expect(body).to.have.property('message');",
+                      "  pm.expect(body).to.have.property('data');",
+                      "});",
+                      "",
+                      "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                      "const setVar = function (key, value) {",
+                      "  if (value === undefined || value === null || value === '') return;",
+                      "  pm.collectionVariables.set(key, value);",
+                      "  if (pm.environment.name) pm.environment.set(key, value);",
+                      "};"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Xoá người dùng",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/user/{{userId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "user",
+                    "{{userId}}"
+                  ]
+                },
+                "description": "DELETE /admin/user/:id — gỡ khỏi nhóm rồi xoá. Thành công: 00391."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('HTTP status hợp lệ', function () {",
+                      "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+                      "});",
+                      "",
+                      "let body = null;",
+                      "try { body = pm.response.json(); } catch (e) {}",
+                      "",
+                      "pm.test('Response có dạng { code, message, data }', function () {",
+                      "  pm.expect(body).to.be.an('object');",
+                      "  pm.expect(body).to.have.property('code');",
+                      "  pm.expect(body).to.have.property('message');",
+                      "  pm.expect(body).to.have.property('data');",
+                      "});",
+                      "",
+                      "// Lưu biến vào cả environment (nếu đang chọn) và collection để request sau dùng lại.",
+                      "const setVar = function (key, value) {",
+                      "  if (value === undefined || value === null || value === '') return;",
+                      "  pm.collectionVariables.set(key, value);",
+                      "  if (pm.environment.name) pm.environment.set(key, value);",
+                      "};"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

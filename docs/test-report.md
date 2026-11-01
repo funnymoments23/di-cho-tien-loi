@@ -1121,7 +1121,6 @@ Ghi chú triển khai:
 
 ## Còn tồn tại (chưa khắc phục)
 
-- `.env` hiện không có `JWT_VERIFY_SECRET` / `JWT_RESET_SECRET`, nên verification token và reset token dùng chung secret với access token (vẫn an toàn nhờ claim `typ`). Nên bổ sung secret riêng cho production.
 - Rate limit chưa có test cho trường hợp nhiều IP khác nhau (cần giả lập `X-Forwarded-For` + `trust proxy`).
 
 ## Vấn đề môi trường đã xử lý
