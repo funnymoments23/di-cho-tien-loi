@@ -1,0 +1,63 @@
+services:
+  - type: web
+    name: di-cho-tien-loi-api
+    runtime: docker
+    plan: free
+    region: singapore
+    rootDir: server
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /it4788/health
+    autoDeployTrigger: commit
+    numInstances: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # MongoDB Atlas
+      - key: MONGODB_URI
+        sync: false
+
+      # JWT: Render tự sinh secret riêng cho từng môi trường
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_VERIFY_SECRET
+        generateValue: true
+      - key: JWT_RESET_SECRET
+        generateValue: true
+
+      # Cloudinary
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: CLOUDINARY_FOLDER
+        value: di-cho-tien-loi
+
+      # Gmail SMTP
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+
+      # Expo Push
+      - key: EXPO_PUSH_URL
+        value: https://exp.host/--/api/v2/push/send
+      - key: EXPO_ACCESS_TOKEN
+        sync: false
+
+      # Cron nhắc hạn sử dụng
+      - key: EXPIRY_CRON_SCHEDULE
+        value: "0 8 * * *"
+      - key: EXPIRY_CRON_TIMEZONE
+        value: Asia/Ho_Chi_Minh
+      - key: EXPIRY_NOTIFY_DAYS
+        value: "3"

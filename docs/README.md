@@ -168,6 +168,31 @@ cd server
 npm test        # 543 test API Auth + Quên mật khẩu + Tài khoản + Nhóm + Danh mục + Đơn vị + Quản trị người dùng + Nhật ký + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + rate limit + cron/push + seed admin + hardening, dùng MongoDB in-memory, không cần .env
 ```
 
+### Deploy lên Render
+
+Repo có sẵn [`render.yaml`](../render.yaml) để deploy bằng Render Blueprint:
+
+1. Push code mới nhất lên GitHub.
+2. Render Dashboard → **Blueprints** → **New Blueprint Instance** → chọn repo.
+3. Render đọc `render.yaml`, tạo Web Service Docker từ `server/Dockerfile`.
+4. Nhập các biến còn thiếu khi Render hỏi: `MONGODB_URI`, `CLOUDINARY_*`, `SMTP_USER`, `SMTP_PASS`, `EXPO_ACCESS_TOKEN`.
+5. Sau khi service **Live**, kiểm tra:
+
+```text
+https://<ten-service>.onrender.com/it4788/health
+```
+
+6. Chạy seed admin trỏ vào MongoDB production:
+
+```bash
+cd server
+npm run seed:admin
+```
+
+7. Đổi `baseUrl` trong Postman thành `https://<ten-service>.onrender.com/it4788`.
+
+Lưu ý: `render.yaml` không chứa secret thật; các biến `sync: false` sẽ được Render hỏi khi tạo Blueprint. Không khai báo `PORT` vì Render tự cấp.
+
 ## Tài liệu
 
 | Tài liệu | Nội dung |
