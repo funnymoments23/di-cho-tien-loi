@@ -23,14 +23,23 @@ Bộ request Postman cho toàn bộ API backend (Express + MongoDB) của dự �
 
 ```bash
 cd server
-node scripts/seed-sample-data.js   # tạo sẵn danh mục "Thịt", đơn vị "kg", thực phẩm mẫu
+node scripts/seed-sample-data.js   # tạo nhóm, 2 user, danh mục "Thịt", đơn vị "kg", thực phẩm mẫu
 node scripts/seed-admin.js         # tạo tài khoản admin từ ADMIN_* trong .env (cho thư mục 10)
 npm run dev
 ```
 
-Tài khoản test phải **đã xác minh email** thì `POST /user/login` mới thành công
-(nếu chưa, chạy lần lượt *Đăng ký → Xác minh email* hoặc dùng tài khoản do
-`seed-sample-data.js` tạo).
+Tài khoản mẫu do seed tạo (đã xác minh email, đăng nhập được ngay):
+
+| Email | Mật khẩu | Username | Vai trò |
+|---|---|---|---|
+| `an.nguyen@example.com` | `Matkhau@123` | `annguyen` | Trưởng nhóm |
+| `binh.tran@example.com` | `Matkhau@123` | `binhtran` | Thành viên |
+
+Environment đã điền sẵn tài khoản `an.nguyen@example.com`. Muốn test API quản trị,
+đổi `email`/`password` sang tài khoản admin do `seed-admin.js` tạo.
+
+Nếu **không** chạy seed: chạy *Đăng ký → Xác minh email → Đăng nhập*, rồi tạo
+danh mục/đơn vị bằng tài khoản admin trước khi tạo thực phẩm.
 
 ## 3. Thứ tự chạy đề xuất
 
@@ -39,19 +48,26 @@ nên không phải copy tay.
 
 ```
 00. Health          → kiểm tra server sống
-01. Auth            → Đăng ký → Xác minh email → Đăng nhập  (token tự lưu)
+01. Auth            → Đăng nhập  (accessToken/refreshToken tự lưu)
 02. Tài khoản       → xem / sửa hồ sơ
-03. Nhóm            → Tạo nhóm  (groupId tự lưu) — nhiều API sau yêu cầu đã vào nhóm
-04. Thực phẩm       → Tạo thực phẩm  (foodId tự lưu)
-05. Tủ lạnh         → Thêm vào tủ  (fridgeItemId tự lưu)
+03. Nhóm            → Tạo nhóm (groupId tự lưu) — chỉ cần khi tài khoản chưa có nhóm
+04. Thực phẩm       → Tạo thực phẩm (foodId tự lưu)
+05. Tủ lạnh         → Thêm vào tủ (fridgeItemId tự lưu)
 06. Đi chợ          → Tạo danh sách → Thêm món → Tick đã mua
 07. Bữa ăn          → Xếp món → Gợi ý món từ tủ
 08. Công thức       → Tạo công thức cho thực phẩm
 09. Báo cáo         → 4 báo cáo + ảnh chụp tủ
-10. Quản trị        → cần đăng nhập bằng tài khoản admin
+10. Quản trị        → đăng nhập bằng tài khoản admin
 ```
 
-Các request **xoá** và **đổi mật khẩu** nên chạy sau cùng vì làm thay đổi dữ liệu/token.
+Lưu ý khi dùng dữ liệu seed:
+
+- Tài khoản `annguyen` **đã ở trong nhóm** → bỏ qua `Tạo nhóm` (nếu chạy sẽ nhận 00093).
+- `Thêm thành viên` / `Xoá thành viên` cần một tài khoản **chưa thuộc nhóm**;
+  `binhtran` đã ở trong nhóm nên chỉ dùng được cho mục đích giao việc đi chợ.
+- `Tạo thực phẩm` mặc định dùng `Cá hồi` — tên chưa có trong seed nên không bị trùng.
+- `Cập nhật thực phẩm` tự đổi biến `foodName` sang tên mới, các request sau vẫn khớp.
+- Các request **xoá** và **đổi mật khẩu** nên chạy sau cùng vì làm thay đổi dữ liệu/token.
 
 ## 4. Biến tự động lưu
 
@@ -63,6 +79,7 @@ Các request **xoá** và **đổi mật khẩu** nên chạy sau cùng vì làm
 | Quên mật khẩu | `resetToken` |
 | Tạo nhóm | `groupId` |
 | Tạo thực phẩm | `foodId` |
+| Cập nhật thực phẩm | `foodName` |
 | Thêm vào tủ | `fridgeItemId` |
 | Tạo danh sách đi chợ | `listId` |
 | Thêm món | `taskId` |
