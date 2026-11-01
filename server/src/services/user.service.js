@@ -5,6 +5,7 @@ const RC = require('../constants/responseCode');
 const { fail } = require('../utils/response');
 const { toPublicUser } = require('../utils/serializers');
 const { deleteAsset } = require('../config/cloudinary');
+const { assertNotLastActiveAdmin } = require('../utils/adminGuard');
 const { detachUserFromGroup } = require('./group.service');
 
 const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS) || 10;
@@ -62,7 +63,8 @@ const updateProfile = async (userId, payload) => {
 };
 
 const deleteAccount = async (userId) => {
-  const user = await findUserOrFail(userId, 'groupId avatarPublicId');
+  const user = await findUserOrFail(userId, 'groupId avatarPublicId role isActive');
+  await assertNotLastActiveAdmin(user); // 00411
 
   // Xoá tài khoản phải gỡ khỏi nhóm trước, nếu không nhóm sẽ còn id "ma"
   // và có thể mất trưởng nhóm (xem group.service.detachUserFromGroup).

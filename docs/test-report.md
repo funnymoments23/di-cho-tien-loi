@@ -4,7 +4,7 @@
 - **Phạm vi:** 6 endpoint Auth + 2 endpoint Quên mật khẩu + 5 endpoint Tài khoản + 6 endpoint Nhóm + 4 endpoint Danh mục + 4 endpoint Đơn vị + 5 endpoint Quản trị người dùng + 5 endpoint Thực phẩm + 5 endpoint Tủ lạnh + 8 endpoint Đi chợ + 5 endpoint Bữa ăn + 4 endpoint Công thức + 5 endpoint Báo cáo (`server/src/routes/user.route.js`, `group.route.js`, `admin.route.js`, `food.route.js`, `fridge.route.js`, `shopping.route.js`, `meal.route.js`, `recipe.route.js`, `report.route.js`) + endpoint health + rate limit
 - **Công cụ:** Jest 30.5.2, Supertest 7.3.1, mongodb-memory-server 11.3.0
 - **Môi trường:** Windows, Node.js v24.11.0, MongoDB in-memory 8.2.6
-- **Kết quả:** **537/537 test PASS**, 21 test suite, ~56 giây (sau khi binary Mongo đã tải sẵn)
+- **Kết quả:** **543/543 test PASS**, 22 test suite, ~62 giây (sau khi binary Mongo đã tải sẵn)
 
 ## Cách chạy
 
@@ -28,6 +28,7 @@ Cấu hình: [`server/jest.config.js`](../server/jest.config.js), biến môi tr
 [`server/tests/hardening.test.js`](../server/tests/hardening.test.js),
 [`server/tests/delete-paths.test.js`](../server/tests/delete-paths.test.js),
 [`server/tests/pagination.test.js`](../server/tests/pagination.test.js),
+[`server/tests/last-admin.test.js`](../server/tests/last-admin.test.js),
 [`server/tests/food.test.js`](../server/tests/food.test.js),
 [`server/tests/fridge.test.js`](../server/tests/fridge.test.js),
 [`server/tests/shopping.test.js`](../server/tests/shopping.test.js),
@@ -1022,7 +1023,7 @@ Ghi chú nhóm Quản trị người dùng:
 - `auth.middleware.js` đọc lại `role` và `isActive` từ DB mỗi request: khoá tài khoản hoặc đổi quyền có hiệu lực ngay, không phải chờ access token 1 giờ hết hạn. Đăng nhập và refresh token cũng chặn tài khoản bị khoá (`00403`).
 - Khoá tài khoản thu hồi `refreshToken`; đổi `role` cũng thu hồi để buộc đăng nhập lại.
 - `DELETE /admin/user/:id` dùng chung `detachUserFromGroup`: xoá trưởng nhóm thì chuyển quyền cho thành viên lâu năm nhất, người cuối cùng thì xoá cả nhóm và dữ liệu liên quan.
-- Chặn admin tự hạ quyền / tự khoá / tự xoá để không mất quyền quản trị ngoài ý muốn. Chưa chặn trường hợp admin hạ quyền admin cuối cùng của hệ thống (xem "Còn tồn tại").
+- Chặn admin tự hạ quyền / tự khoá / tự xoá để không mất quyền quản trị ngoài ý muốn. Bổ sung kiểm tra `00411`: không thể hạ quyền, khoá, xoá hoặc tự xoá admin đang hoạt động cuối cùng của hệ thống.
 
 ### Nhóm API Nhật ký hệ thống (`tests/logs.test.js`) — 13/13
 
@@ -1092,6 +1093,17 @@ Ghi chú nhóm Quản trị người dùng:
 | P6 | `GET /recipe?page=2&limit=2` | `total=3`, `items=1` | PASS |
 | P7 | `page`/`limit` sai | 400 / `00410` | PASS |
 
+### Chặn mất admin cuối cùng (`tests/last-admin.test.js`) — 6/6
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| A1 | Admin cuối cùng tự xoá bằng `DELETE /user` | 400 / `00411`, tài khoản vẫn còn | PASS |
+| A2 | Chỉ còn 1 admin active, admin khác đã bị khoá | Vẫn bị chặn `00411` | PASS |
+| A3 | Có 2 admin, một admin tự xoá | 200; admin còn lại vẫn giữ quyền | PASS |
+| A4 | Có 2 admin, hạ quyền admin còn lại | 200; role còn lại là `user` | PASS |
+| A5 | Có 2 admin, khoá admin còn lại | 200; `isActive=false` | PASS |
+| A6 | Có 2 admin, xoá admin còn lại | 200; admin thao tác vẫn còn | PASS |
+
 ## 4 vấn đề đã khắc phục
 
 | # | Trước | Sau |
@@ -1111,7 +1123,6 @@ Ghi chú triển khai:
 
 - `.env` hiện không có `JWT_VERIFY_SECRET` / `JWT_RESET_SECRET`, nên verification token và reset token dùng chung secret với access token (vẫn an toàn nhờ claim `typ`). Nên bổ sung secret riêng cho production.
 - Rate limit chưa có test cho trường hợp nhiều IP khác nhau (cần giả lập `X-Forwarded-For` + `trust proxy`).
-- `PUT /admin/user/:id` chưa chặn hạ quyền **admin cuối cùng** của hệ thống (chỉ chặn admin tự hạ quyền chính mình). Nếu có nhiều admin, một admin vẫn có thể hạ quyền admin còn lại; cần bổ sung kiểm tra `countDocuments({ role: 'admin', isActive: { $ne: false } }) > 1` nếu muốn chắc chắn không mất quyền quản trị.
 
 ## Vấn đề môi trường đã xử lý
 

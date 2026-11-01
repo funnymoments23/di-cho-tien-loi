@@ -457,6 +457,11 @@ const RESPONSE_CODE = Object.freeze({
       BAD_REQUEST,
       'Tham số phân trang không hợp lệ. page phải >= 1, limit từ 1 đến 100.'
     ),
+    ADMIN_USER_LAST_ADMIN: def(
+      '00411',
+      BAD_REQUEST,
+      'Không thể thực hiện vì đây là quản trị viên đang hoạt động cuối cùng của hệ thống. Hãy tạo hoặc nâng quyền một quản trị viên khác trước.'
+    ),
 });
 
 module.exports = RESPONSE_CODE;

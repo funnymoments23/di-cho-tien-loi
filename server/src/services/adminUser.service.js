@@ -4,6 +4,7 @@ const RC = require('../constants/responseCode');
 const { fail } = require('../utils/response');
 const { toAdminUser } = require('../utils/serializers');
 const { deleteAsset } = require('../config/cloudinary');
+const { assertNotLastActiveAdmin } = require('../utils/adminGuard');
 const { detachUserFromGroup } = require('./group.service');
 const { listUsersQuerySchema } = require('../validations/adminUser.validation');
 
@@ -101,6 +102,10 @@ const updateUser = async (actorId, userId, payload) => {
 
   const roleChanged = payload.role !== undefined && payload.role !== user.role;
   if (roleChanged && isSelf) throw fail(RC.ADMIN_USER_CANNOT_CHANGE_OWN_ROLE); // 00399
+  // Hạ quyền admin cuối cùng sẽ khiến hệ thống không còn ai quản trị.
+  if (roleChanged && user.role === 'admin' && payload.role === 'user') {
+    await assertNotLastActiveAdmin(user); // 00411
+  }
 
   let oldAvatarPublicId = null;
 
@@ -164,6 +169,9 @@ const updateUserStatus = async (actorId, userId, { isActive }) => {
   if (!isActive && String(user._id) === String(actorId)) {
     throw fail(RC.ADMIN_USER_CANNOT_LOCK_SELF); // 00400
   }
+  if (!isActive && user.isActive !== false) {
+    await assertNotLastActiveAdmin(user); // 00411
+  }
 
   // Gọi lại với cùng trạng thái là thao tác idempotent, vẫn trả thành công.
   if ((user.isActive !== false) === isActive) return toAdminUser(user);
@@ -188,6 +196,7 @@ const deleteUser = async (actorId, userId) => {
   if (String(user._id) === String(actorId)) {
     throw fail(RC.ADMIN_USER_CANNOT_DELETE_SELF); // 00401
   }
+  await assertNotLastActiveAdmin(user); // 00411
 
   await detachUserFromGroup(user);
   await User.findByIdAndDelete(user._id);

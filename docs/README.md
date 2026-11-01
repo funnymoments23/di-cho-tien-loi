@@ -77,9 +77,10 @@ di-cho-tien-loi/
 - **Nhóm API Quản trị người dùng** (`routes/admin.route.js`, 5 endpoint) — admin quản lý tài khoản người dùng; phần bổ sung vì đặc tả API gốc không có endpoint nào.
   - `GET /admin/user` — danh sách có lọc `keyword`, `role`, `status`, `isVerified`, `groupId` và phân trang `page`/`limit` (`00387`; query sai `00394`).
   - `GET /admin/user/:id` — chi tiết một tài khoản, kèm `groupName` (`00388`; id sai `00393`, không tìm thấy `00392`).
-  - `PUT /admin/user/:id` — sửa hồ sơ, `role`, `isVerified` (`00389`; body rỗng `00395`, dữ liệu sai `00396`/`00077`, email trùng `00397`, username trùng `00398`, tự hạ quyền `00399`).
-  - `PATCH /admin/user/:id/status` — khoá / mở khoá với `{ isActive }` (`00390`; thiếu/sai `isActive` `00402`, tự khoá `00400`).
-  - `DELETE /admin/user/:id` — xoá tài khoản, gỡ khỏi nhóm và chuyển quyền trưởng nhóm nếu cần (`00391`; tự xoá `00401`, không tìm thấy `00392`).
+  - `PUT /admin/user/:id` — sửa hồ sơ, `role`, `isVerified` (`00389`; body rỗng `00395`, dữ liệu sai `00396`/`00077`, email trùng `00397`, username trùng `00398`, tự hạ quyền `00399`, hạ quyền admin cuối cùng `00411`).
+  - `PATCH /admin/user/:id/status` — khoá / mở khoá với `{ isActive }` (`00390`; thiếu/sai `isActive` `00402`, tự khoá `00400`, khoá admin cuối cùng `00411`).
+  - `DELETE /admin/user/:id` — xoá tài khoản, gỡ khỏi nhóm và chuyển quyền trưởng nhóm nếu cần (`00391`; tự xoá `00401`, xoá admin cuối cùng `00411`, không tìm thấy `00392`).
+  - `DELETE /user` — tài khoản admin cuối cùng không được tự xoá (`00411`); cần tạo/nâng quyền admin khác trước.
   - Nền tảng: `User.isActive`/`lockedAt`; `auth.middleware.js` đọc lại `role`/`isActive` từ DB mỗi request nên khoá tài khoản và đổi quyền có hiệu lực ngay; đăng nhập / refresh token của tài khoản bị khoá trả `00403`; serializer `toAdminUser`.
 - **Nhóm API Thực phẩm** (`routes/food.route.js`, 5 endpoint) — danh mục thực phẩm riêng của từng nhóm, tên duy nhất trong phạm vi nhóm.
   - `GET /food` — danh sách thực phẩm của nhóm, kèm `categoryName`/`unitName` (`00188`; chưa vào nhóm `00185`).
@@ -142,7 +143,7 @@ di-cho-tien-loi/
   - Ghi log không làm hỏng nghiệp vụ chính: lỗi ghi log chỉ in cảnh báo, response vẫn thành công.
 - **Phân trang danh sách** — `GET /food`, `/food/search`, `/fridge`, `/shopping`, `/shopping/task`, `/meal`, `/recipe` nhận thêm `?page=&limit=` (limit 1–100). Khi có tham số, `data` là `{ items, total, page, limit, totalPages }`; không truyền thì giữ nguyên response mảng cũ để tương thích client.
 - **Tạo tài khoản admin** (`scripts/seed-admin.js`) — `npm run seed:admin` tạo mới hoặc nâng quyền tài khoản theo `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME`, `ADMIN_USERNAME` trong `.env`; tài khoản đã có được giữ `groupId`/`deviceToken` và được mở khoá, đặt lại mật khẩu, gán `role = admin`.
-- **Kiểm thử tự động**: 537 test (Auth + Quên mật khẩu + Tài khoản + Nhóm + Danh mục + Đơn vị + Quản trị người dùng + Nhật ký + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + rate limit + cron/push + seed admin + hardening), hiện **537/537 pass** — xem [báo cáo kiểm thử](test-report.md).
+- **Kiểm thử tự động**: 543 test (Auth + Quên mật khẩu + Tài khoản + Nhóm + Danh mục + Đơn vị + Quản trị người dùng + Nhật ký + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + rate limit + cron/push + seed admin + hardening), hiện **543/543 pass** — xem [báo cáo kiểm thử](test-report.md).
 
 ### Chưa làm
 
@@ -162,7 +163,7 @@ npm run dev          # http://localhost:5000/it4788/health
 
 ```bash
 cd server
-npm test        # 537 test API Auth + Quên mật khẩu + Tài khoản + Nhóm + Danh mục + Đơn vị + Quản trị người dùng + Nhật ký + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + rate limit + cron/push + seed admin + hardening, dùng MongoDB in-memory, không cần .env
+npm test        # 543 test API Auth + Quên mật khẩu + Tài khoản + Nhóm + Danh mục + Đơn vị + Quản trị người dùng + Nhật ký + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + rate limit + cron/push + seed admin + hardening, dùng MongoDB in-memory, không cần .env
 ```
 
 ## Tài liệu
@@ -171,7 +172,7 @@ npm test        # 537 test API Auth + Quên mật khẩu + Tài khoản + Nhóm 
 |---|---|
 | [01 – Kế hoạch & Kiến trúc](01-KE-HOACH-KIEN-TRUC.md) | Kiến trúc hệ thống, thiết kế database, cấu trúc thư mục, danh sách màn hình, lộ trình 8 tuần, phân công |
 | [02 – Rà soát đặc tả API](02-GOP-Y-DAC-TA-API.md) | 17 lỗi phát hiện trong mô tả API của đề và đề xuất sửa đổi (phần tính điểm cộng) |
-| [Báo cáo kiểm thử](test-report.md) | 537 test API Auth + Quên mật khẩu + Tài khoản + Nhóm + Danh mục + Đơn vị + Quản trị người dùng + Nhật ký + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + cron/push + seed admin + hardening: ma trận case, kết quả, phát hiện và cách chạy |
+| [Báo cáo kiểm thử](test-report.md) | 543 test API Auth + Quên mật khẩu + Tài khoản + Nhóm + Danh mục + Đơn vị + Quản trị người dùng + Nhật ký + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + cron/push + seed admin + hardening: ma trận case, kết quả, phát hiện và cách chạy |
 
 ## Bắt đầu
 
