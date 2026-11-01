@@ -1,4 +1,5 @@
 const Category = require('../models/category.models');
+const Food = require('../models/food.models');
 const RC = require('../constants/responseCode');
 const { fail } = require('../utils/response');
 const { toPublicLookup } = require('../utils/serializers');
@@ -49,8 +50,15 @@ const updateCategory = async ({ name, newName }) => {
 
 /** DELETE /admin/category — xoá danh mục theo tên (00143 nếu không tồn tại). */
 const deleteCategory = async ({ name }) => {
-  const category = await Category.findOneAndDelete({ name });
+  const category = await Category.findOne({ name });
   if (!category) throw fail(RC.CATEGORY_DELETE_NOT_FOUND); // 00143
+
+  // Không để Food trỏ tới danh mục đã bị xoá: chặn nếu còn thực phẩm tham chiếu.
+  if (await Food.exists({ categoryId: category._id })) {
+    throw fail(RC.CATEGORY_DELETE_IN_USE); // 00407
+  }
+
+  await Category.deleteOne({ _id: category._id });
   return toPublicLookup(category);
 };
 

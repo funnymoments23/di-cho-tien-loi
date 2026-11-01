@@ -1,4 +1,5 @@
 const Unit = require('../models/unit.models');
+const Food = require('../models/food.models');
 const RC = require('../constants/responseCode');
 const { fail } = require('../utils/response');
 const { toPublicLookup } = require('../utils/serializers');
@@ -49,8 +50,15 @@ const updateUnit = async ({ name, newName }) => {
 
 /** DELETE /admin/unit — xoá đơn vị theo tên (00125 nếu không tồn tại). */
 const deleteUnit = async ({ name }) => {
-  const unit = await Unit.findOneAndDelete({ name });
+  const unit = await Unit.findOne({ name });
   if (!unit) throw fail(RC.UNIT_DELETE_NOT_FOUND); // 00125
+
+  // Không để Food trỏ tới đơn vị đã bị xoá.
+  if (await Food.exists({ unitId: unit._id })) {
+    throw fail(RC.UNIT_DELETE_IN_USE); // 00408
+  }
+
+  await Unit.deleteOne({ _id: unit._id });
   return toPublicLookup(unit);
 };
 

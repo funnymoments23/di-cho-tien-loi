@@ -5,6 +5,7 @@ const User = require('../models/user.models');
 const Group = require('../models/group.models');
 const RC = require('../constants/responseCode');
 const { fail } = require('../utils/response');
+const { parsePagination, pageResult, applyPagination } = require('../utils/pagination');
 const { toPublicRecipe } = require('../utils/serializers');
 
 // Luôn lấy kèm tên / ảnh của món để client hiển thị trực tiếp.
@@ -45,6 +46,7 @@ const loadGroupContext = async (userId) => {
  */
 const getRecipes = async (userId, filters = {}) => {
   const { group } = await loadGroupContext(userId); // 00096
+  const pagination = parsePagination(filters);
 
   const query = { groupId: group._id };
   const foodId = normalizeText(filters.foodId);
@@ -52,16 +54,23 @@ const getRecipes = async (userId, filters = {}) => {
 
   if (foodId) {
     // foodId sai định dạng thì chắc chắn không có công thức nào khớp.
-    if (!mongoose.isValidObjectId(foodId)) return [];
+    if (!mongoose.isValidObjectId(foodId)) {
+      return pagination ? pageResult([], 0, pagination) : [];
+    }
     query.foodId = foodId;
   } else if (foodName) {
     const food = await Food.findOne({ groupId: group._id, name: foodName });
-    if (!food) return [];
+    if (!food) return pagination ? pageResult([], 0, pagination) : [];
     query.foodId = food._id;
   }
 
-  const recipes = await Recipe.find(query).populate(RECIPE_POPULATE).sort({ name: 1 });
-  return recipes.map(toPublicRecipe);
+  const total = pagination ? await Recipe.countDocuments(query) : null;
+  const recipeQuery = Recipe.find(query).populate(RECIPE_POPULATE).sort({ name: 1 });
+  const recipes = await applyPagination(recipeQuery, pagination).then((rows) =>
+    rows.map(toPublicRecipe)
+  );
+
+  return pagination ? pageResult(recipes, total, pagination) : recipes;
 };
 
 /**

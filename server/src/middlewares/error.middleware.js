@@ -10,7 +10,7 @@ const notFound = (req, res, next)=> {
 //Xử lí lỗi tập trung
 const errorHandler = (err, req, res, next) => {
     if (err.type === 'entity.parse.failed') {
-        err = new AppError('Dữ liệu JSON không hợp lệ',404,'00404')
+        err = fromRC(RC.INVALID_JSON);
     }
 
     // Trùng khoá unique của MongoDB (thường do 2 request đăng ký cùng lúc).

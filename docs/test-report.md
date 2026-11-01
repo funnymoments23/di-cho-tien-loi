@@ -4,7 +4,7 @@
 - **Phạm vi:** 6 endpoint Auth + 2 endpoint Quên mật khẩu + 5 endpoint Tài khoản + 6 endpoint Nhóm + 4 endpoint Danh mục + 4 endpoint Đơn vị + 5 endpoint Quản trị người dùng + 5 endpoint Thực phẩm + 5 endpoint Tủ lạnh + 8 endpoint Đi chợ + 5 endpoint Bữa ăn + 4 endpoint Công thức + 5 endpoint Báo cáo (`server/src/routes/user.route.js`, `group.route.js`, `admin.route.js`, `food.route.js`, `fridge.route.js`, `shopping.route.js`, `meal.route.js`, `recipe.route.js`, `report.route.js`) + endpoint health + rate limit
 - **Công cụ:** Jest 30.5.2, Supertest 7.3.1, mongodb-memory-server 11.3.0
 - **Môi trường:** Windows, Node.js v24.11.0, MongoDB in-memory 8.2.6
-- **Kết quả:** **509/509 test PASS**, 18 test suite, ~47 giây (sau khi binary Mongo đã tải sẵn)
+- **Kết quả:** **537/537 test PASS**, 21 test suite, ~56 giây (sau khi binary Mongo đã tải sẵn)
 
 ## Cách chạy
 
@@ -25,6 +25,9 @@ Cấu hình: [`server/jest.config.js`](../server/jest.config.js), biến môi tr
 [`server/tests/admin-user.test.js`](../server/tests/admin-user.test.js),
 [`server/tests/logs.test.js`](../server/tests/logs.test.js),
 [`server/tests/seed-admin.test.js`](../server/tests/seed-admin.test.js),
+[`server/tests/hardening.test.js`](../server/tests/hardening.test.js),
+[`server/tests/delete-paths.test.js`](../server/tests/delete-paths.test.js),
+[`server/tests/pagination.test.js`](../server/tests/pagination.test.js),
 [`server/tests/food.test.js`](../server/tests/food.test.js),
 [`server/tests/fridge.test.js`](../server/tests/fridge.test.js),
 [`server/tests/shopping.test.js`](../server/tests/shopping.test.js),
@@ -136,7 +139,7 @@ Kiểm tra thêm ở case 6: mật khẩu trong DB là hash bcrypt (không phả
 | 48 | Áp dụng cho đăng ký, gửi mã, xác minh email | Mỗi endpoint: request thứ 2 khi ngưỡng = 1 → 429 / `00024` | PASS |
 | 49 | `AUTH_RATE_LIMIT_MAX=0` | Tắt hoàn toàn, 10 request liên tiếp không bị chặn | PASS |
 
-### Nhóm API Tài khoản (`tests/user.test.js`) — 27/27
+### Nhóm API Tài khoản (`tests/user.test.js`) — 29/29
 
 #### `GET /it4788/user` — xem hồ sơ (4/4)
 
@@ -415,7 +418,7 @@ Ghi chú nhóm Đơn vị:
 - Việc tạo/sửa bắt lỗi trùng khoá `11000` của MongoDB để hai request đồng thời vẫn trả đúng `00113`/`00132` thay vì lỗi máy chủ.
 - Model `Food` đã có (`name`, `categoryId`, `unitId`, `image`, `groupId`, `createdBy`) với unique index `{ groupId, name }`. Tuy nhiên `DELETE /admin/category` và `DELETE /admin/unit` **chưa chặn** xoá danh mục/đơn vị đang được thực phẩm tham chiếu — xem mục "Còn tồn tại".
 
-### Nhóm API Thực phẩm (`tests/food.test.js`) — 47/47
+### Nhóm API Thực phẩm (`tests/food.test.js`) — 49/49
 
 #### `GET /it4788/food` — danh sách thực phẩm của nhóm (5/5)
 
@@ -552,7 +555,7 @@ Ghi chú nhóm Thực phẩm:
 | 231 | `newUseWithin` không hợp lệ | 400 / `00205` | PASS |
 | 232 | `newQuantity` <= 0 hoặc không phải số | 400 / `00206` | PASS |
 | 233 | `newNote` quá 500 ký tự | 400 / `00207` | PASS |
-| 234 | `newFoodName` rỗng | 400 / `00207` | PASS |
+| 234 | `newFoodName` rỗng | 400 / `00209` | PASS |
 | 235 | Người dùng chưa vào nhóm | 403 / `00210` | PASS |
 | 236 | Mục trong tủ không tồn tại | 404 / `00213` | PASS |
 | 237 | Mục thuộc nhóm khác | 403 / `00212` | PASS |
@@ -899,7 +902,7 @@ Ghi chú nhóm Công thức:
 | P18 | Chạy lần hai | Không gửi lại mục đã nhắc | PASS |
 | P19 | Không có mục nào | Không gọi Expo, summary toàn 0 | PASS |
 
-### Nhóm API Báo cáo (`tests/report.test.js`) — 24/24
+### Nhóm API Báo cáo (`tests/report.test.js`) — 27/27
 
 #### Xác thực & khoảng thời gian (7/7)
 
@@ -918,12 +921,13 @@ Ghi chú nhóm Công thức:
 | # | Case | Kỳ vọng | Kết quả |
 |---|---|---|---|
 | R8 | Chưa có dữ liệu | Summary toàn 0, chuỗi 30 ngày, mảng gộp rỗng | PASS |
-| R9 | 1 danh sách + 2 món, tick 1 | `lists=1`, `items=2`, `completedItems=1`, `completionRate=0.5` | PASS |
+| R9 | 1 danh sách + 2 món, tick 1 | `lists=1`, `items=2`, `completedItems=1`, `createdCompletedItems=1`, `completionRate=0.5` | PASS |
 | R10 | Chuỗi theo ngày | Hôm nay `lists=1`, `itemsCreated=2`, `itemsCompleted=1` | PASS |
 | R11 | Gộp theo danh mục / người được giao | Đúng danh mục thực phẩm và username được giao | PASS |
 | R12 | Dữ liệu của nhóm khác | Không lẫn sang báo cáo nhóm mình | PASS |
 | R13 | Khoảng thời gian trong quá khứ | Không tính dữ liệu hôm nay | PASS |
 | R14 | Tick / bỏ tick | `Task.completedAt` được đặt rồi xoá về `null` | PASS |
+| R14b | Món tạo trước kỳ, tick trong kỳ | `items=0`, `completedItems=1`, `createdCompletedItems=0`; series/byCategory khớp | PASS |
 
 #### `GET /report/consumption` — tiêu thụ (3/3)
 
@@ -933,11 +937,13 @@ Ghi chú nhóm Công thức:
 | R16 | Xoá mục đã hết hạn | Không nằm trong báo cáo tiêu thụ | PASS |
 | R17 | Sự kiện của nhóm khác | Không lẫn sang báo cáo nhóm mình | PASS |
 
-#### `GET /report/waste` — lãng phí (4/4)
+#### `GET /report/waste` — lãng phí (6/6)
 
 | # | Case | Kỳ vọng | Kết quả |
 |---|---|---|---|
 | R18 | Xoá mục hết hạn | `items=1`, `quantity=2`, `byReason=expired`, `wasteRate=1` | PASS |
+| R18b | Mục hết hạn còn trong tủ | Vẫn tính `items=1`, `quantity=2`, `byReason=expired` | PASS |
+| R18c | Xoá thực phẩm có mục trong tủ | Ghi `FridgeEvent` và báo cáo lãng phí đúng | PASS |
 | R19 | Vừa tiêu thụ vừa bỏ đi | `wasteRate = 2 / (2 + 2) = 0.5` | PASS |
 | R20 | Client gửi `reason=consumed` cho mục quá hạn | Ưu tiên lý do client, không tính vào lãng phí | PASS |
 | R21 | `reason` không hợp lệ | 400 / `00226` | PASS |
@@ -1050,6 +1056,42 @@ Ghi chú nhóm Quản trị người dùng:
 | S8 | Tên/username sai độ dài | Báo lỗi rõ ràng | PASS |
 | S9 | Chuẩn hoá input | Email chữ thường, trim tên/username | PASS |
 
+### Sửa lỗi toàn vẹn & bảo mật (`tests/hardening.test.js`) — 5/5
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| H1 | Xoá danh mục đang được Food dùng | 409 / `00407`, danh mục vẫn còn | PASS |
+| H2 | Xoá đơn vị đang được Food dùng | 409 / `00408`, đơn vị vẫn còn | PASS |
+| H3 | Body JSON sai định dạng | 400 / `00409` (trước là 404) | PASS |
+| H4 | Đổi mật khẩu rồi dùng access token cũ | 401 / `00012` | PASS |
+| H5 | Reset mật khẩu rồi dùng access token cũ | 401 / `00012` | PASS |
+
+### DELETE bằng path param (`tests/delete-paths.test.js`) — 9/9
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| D1 | `DELETE /food/:id` | 200 / `00184`, food bị xoá | PASS |
+| D2 | `DELETE /fridge/:itemId` | 200 / `00224`, mục tủ bị xoá | PASS |
+| D3 | `DELETE /shopping/:listId` | 200 / `00275`, list + task bị xoá | PASS |
+| D4 | `DELETE /shopping/task/:taskId` | 200 / `00299` | PASS |
+| D5 | `DELETE /meal/:planId` | 200 / `00330` | PASS |
+| D6 | `DELETE /recipe/:recipeId` | 200 / `00376` | PASS |
+| D7 | `DELETE /user/group/:username` | 200 / `00106`, thành viên rời nhóm | PASS |
+| D8 | `DELETE /admin/category/:name` | 200 / `00146` | PASS |
+| D9 | `DELETE /admin/unit/:name` | 200 / `00128` | PASS |
+
+### Phân trang danh sách (`tests/pagination.test.js`) — 7/7
+
+| # | Case | Kỳ vọng | Kết quả |
+|---|---|---|---|
+| P1 | `GET /food?page=2&limit=2` | `total=3`, `items=1`, `totalPages=2` | PASS |
+| P2 | `GET /food` không truyền page/limit | Vẫn trả mảng như cũ | PASS |
+| P3 | `GET /fridge?page=1&limit=2` | `total=3`, `items=2` | PASS |
+| P4 | `GET /shopping?page=1&limit=2` | `total=3`, `items=2` | PASS |
+| P5 | `GET /meal?page=1&limit=2` | `total=3`, `items=2` | PASS |
+| P6 | `GET /recipe?page=2&limit=2` | `total=3`, `items=1` | PASS |
+| P7 | `page`/`limit` sai | 400 / `00410` | PASS |
+
 ## 4 vấn đề đã khắc phục
 
 | # | Trước | Sau |
@@ -1069,7 +1111,6 @@ Ghi chú triển khai:
 
 - `.env` hiện không có `JWT_VERIFY_SECRET` / `JWT_RESET_SECRET`, nên verification token và reset token dùng chung secret với access token (vẫn an toàn nhờ claim `typ`). Nên bổ sung secret riêng cho production.
 - Rate limit chưa có test cho trường hợp nhiều IP khác nhau (cần giả lập `X-Forwarded-For` + `trust proxy`).
-- `DELETE /admin/category` và `DELETE /admin/unit` chưa kiểm tra thực phẩm đang tham chiếu: xoá danh mục/đơn vị sẽ để lại `Food` trỏ tới id không còn tồn tại. Cần chặn (trả mã phù hợp) hoặc chuyển thực phẩm sang danh mục/đơn vị mặc định.
 - `PUT /admin/user/:id` chưa chặn hạ quyền **admin cuối cùng** của hệ thống (chỉ chặn admin tự hạ quyền chính mình). Nếu có nhiều admin, một admin vẫn có thể hạ quyền admin còn lại; cần bổ sung kiểm tra `countDocuments({ role: 'admin', isActive: { $ne: false } }) > 1` nếu muốn chắc chắn không mất quyền quản trị.
 
 ## Vấn đề môi trường đã xử lý

@@ -124,7 +124,15 @@ const issuePasswordReset = async (user) => {
 
 const forgotPassword = async ({ email }) => {
   const user = await User.findOne({ email });
-  if (!user) throw fail(RC.EMAIL_ACCOUNT_NOT_FOUND); // 00036
+
+  // Không tiết lộ email có tồn tại hay không: luôn trả cùng mã 00048 và cùng
+  // hình dạng dữ liệu. Email không tồn tại nhận một resetToken giả (không gửi mail).
+  if (!user) {
+    return {
+      resetToken: signPasswordResetToken({ _id: new mongoose.Types.ObjectId() }),
+      codeExpiresIn: RESET_CODE_TTL_MINUTES * 60,
+    };
+  }
 
   return issuePasswordReset(user);
 };
@@ -144,7 +152,9 @@ const resetPassword = async ({ code, token, newPassword }) => {
   const user = await User.findById(payload.sub).select(
     '+password +passwordResetCode +passwordResetCodeExpiresAt'
   );
-  if (!user) throw fail(RC.USER_NOT_FOUND); // 00052
+  // Không tiết lộ tài khoản có tồn tại hay không: token giả / user đã bị xoá
+  // đều trả cùng lỗi như mã sai.
+  if (!user) throw fail(RC.RESET_PASSWORD_CODE_INVALID); // 00067
 
   if (!user.passwordResetCode || !safeCompare(user.passwordResetCode, code)) {
     throw fail(RC.RESET_PASSWORD_CODE_INVALID); // 00067
@@ -165,6 +175,7 @@ const resetPassword = async ({ code, token, newPassword }) => {
   user.passwordResetCode = undefined;
   user.passwordResetCodeExpiresAt = undefined;
   user.refreshToken = null;
+  user.tokenVersion = (user.tokenVersion || 0) + 1;
   await user.save();
 };
 
@@ -203,6 +214,9 @@ const refresh = async (refreshToken) => {
   if (!user) throw fail(RC.REFRESH_TOKEN_USER_MISMATCH); // 00061
   // Tài khoản bị khoá thì không được cấp lại token.
   if (user.isActive === false) throw fail(RC.ACCOUNT_LOCKED); // 00403
+  if ((payload.ver ?? 0) !== (user.tokenVersion ?? 0)) {
+    throw fail(RC.REFRESH_TOKEN_UNVERIFIABLE); // 00063
+  }
 
   // Không khớp hash đang lưu => token đã bị thu hồi (logout) hoặc đã rotate.
   const stored = user.refreshToken;

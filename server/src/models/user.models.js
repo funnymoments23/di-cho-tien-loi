@@ -6,6 +6,8 @@ const userSchema = new mongoose.Schema({
   name:     { type: String, required: true, trim: true },
   username: { type: String, unique: true, sparse: true, trim: true },
   avatar:   { type: String, default: null },
+  // public_id trên Cloudinary, dùng để xoá ảnh cũ khi đổi/xoá avatar.
+  avatarPublicId: { type: String, default: null },
   gender:   { type: String, enum: ['female', 'male', 'other'], default: null },
   birthday: { type: Date, default: null },
   language: { type: String, enum: ['vi', 'en'], default: 'vi' },
@@ -17,6 +19,8 @@ const userSchema = new mongoose.Schema({
   passwordResetCode:          { type: String, select: false },
   passwordResetCodeExpiresAt: { type: Date,   select: false },
   refreshToken: { type: String, select: false },
+  // Tăng khi đổi/reset mật khẩu để vô hiệu hoá access token cũ (stateless JWT).
+  tokenVersion: { type: Number, default: 0 },
   role:    { type: String, enum: ['user', 'admin'], default: 'user' },
   // Admin khoá/mở khoá tài khoản. Tài khoản cũ chưa có trường này được coi là
   // đang hoạt động (so sánh `=== false` ở middleware/service).

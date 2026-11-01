@@ -40,7 +40,8 @@ const updateMealPlan = async (req, res, next) => {
 
 const deleteMealPlan = async (req, res, next) => {
   try {
-    const data = await mealService.deleteMealPlan(req.user.id, req.body);
+    const payload = req.params.planId ? { planId: req.params.planId } : req.body;
+    const data = await mealService.deleteMealPlan(req.user.id, payload);
     sendSuccess(res, RC.MEAL_DELETE_SUCCESS, data); // 00330
   } catch (err) {
     next(err);

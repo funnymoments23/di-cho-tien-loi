@@ -93,10 +93,12 @@ describe(`POST ${BASE}/forgot-password — yêu cầu mã đặt lại mật kh�
     expect(res.body.code).toBe(RC.REGISTER_INVALID_EMAIL.code);
   });
 
-  it('00036 khi email không tồn tại', async () => {
+  it('không tiết lộ email không tồn tại: vẫn trả 00048 nhưng không gửi mail', async () => {
     const res = await forgotPassword(nextEmail());
-    expect(res.status).toBe(404);
-    expect(res.body.code).toBe(RC.EMAIL_ACCOUNT_NOT_FOUND.code);
+    expect(res.status).toBe(200);
+    expect(res.body.code).toBe(RC.SEND_CODE_SUCCESS.code);
+    expect(res.body.data.resetToken).toEqual(expect.any(String));
+    expect(res.body.data.codeExpiresIn).toBe(600);
     expect(emailUtil.sendPasswordResetCode).not.toHaveBeenCalled();
   });
 
@@ -234,14 +236,14 @@ describe(`POST ${BASE}/reset-password — đặt mật khẩu mới`, () => {
     expect(res.body.code).toBe(RC.RESET_PASSWORD_TOKEN_INVALID.code);
   });
 
-  it('00055 khi token hợp lệ nhưng user không tồn tại', async () => {
+  it('token hợp lệ nhưng user không tồn tại trả cùng lỗi mã sai (00067)', async () => {
     const payload = await createVerifiedUser();
     const { token } = await requestReset(payload.email);
     await User.deleteMany({});
 
     const res = await resetPassword({ code: '123456', token, newPassword: 'matkhaumoi1' });
-    expect(res.status).toBe(404);
-    expect(res.body.code).toBe(RC.USER_NOT_FOUND.code);
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe(RC.RESET_PASSWORD_CODE_INVALID.code);
   });
 
   it('00067 khi mã sai; mật khẩu không đổi', async () => {

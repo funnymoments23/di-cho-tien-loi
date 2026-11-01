@@ -73,4 +73,8 @@ router.delete(
   fridgeController.deleteFridgeItem
 ); // 00224
 
+// DELETE /fridge/:itemId — chuyển định danh sang path param (khuyến nghị docs/02 mục 2.6).
+// Giữ DELETE /fridge với body { foodName } để không phá vỡ client cũ.
+router.delete('/:itemId', auth, fridgeController.deleteFridgeItem); // 00224
+
 module.exports = router;

@@ -7,6 +7,7 @@ const User = require('../models/user.models');
 const Group = require('../models/group.models');
 const RC = require('../constants/responseCode');
 const { fail } = require('../utils/response');
+const { parsePagination, pageResult, applyPagination } = require('../utils/pagination');
 const { toPublicMealPlan, toPublicRecipe } = require('../utils/serializers');
 
 // Luôn lấy kèm tên / ảnh / danh mục / đơn vị của món để client hiển thị trực tiếp.
@@ -135,12 +136,20 @@ const compareMealPlans = (a, b) => {
 const getMealPlans = async (userId, filters = {}) => {
   const { group } = await loadGroupContext(userId, RC.MEAL_GET_NOT_IN_GROUP); // 00345
 
+  const pagination = parsePagination(filters);
   const query = { groupId: group._id };
   const timeFilter = buildTimeFilter(filters);
   if (timeFilter) query.timestamp = timeFilter;
 
-  const plans = await MealPlan.find(query).populate(MEAL_POPULATE);
-  return plans.sort(compareMealPlans).map(toPublicMealPlan);
+  const total = pagination ? await MealPlan.countDocuments(query) : null;
+  const planQuery = MealPlan.find(query)
+    .populate(MEAL_POPULATE)
+    .sort({ timestamp: 1, createdAt: 1 });
+  const plans = await applyPagination(planQuery, pagination).then((rows) => rows.map(toPublicMealPlan));
+
+  if (pagination) return pageResult(plans, total, pagination);
+
+  return plans.sort(compareMealPlans);
 };
 
 /**

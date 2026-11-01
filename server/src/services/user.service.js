@@ -4,6 +4,7 @@ const User = require('../models/user.models');
 const RC = require('../constants/responseCode');
 const { fail } = require('../utils/response');
 const { toPublicUser } = require('../utils/serializers');
+const { deleteAsset } = require('../config/cloudinary');
 const { detachUserFromGroup } = require('./group.service');
 
 const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS) || 10;
@@ -44,21 +45,30 @@ const updateProfile = async (userId, payload) => {
     if (payload[field] !== undefined) user[field] = payload[field];
   }
 
+  let oldAvatarPublicId = null;
   if (payload.avatar !== undefined) {
+    oldAvatarPublicId = user.avatarPublicId;
     user.avatar = payload.avatar === '' ? null : payload.avatar;
+    user.avatarPublicId = payload.avatarPublicId || null;
   }
 
   await user.save();
+
+  if (oldAvatarPublicId && oldAvatarPublicId !== user.avatarPublicId) {
+    await deleteAsset(oldAvatarPublicId);
+  }
+
   return toPublicUser(user);
 };
 
 const deleteAccount = async (userId) => {
-  const user = await findUserOrFail(userId, 'groupId');
+  const user = await findUserOrFail(userId, 'groupId avatarPublicId');
 
   // Xoá tài khoản phải gỡ khỏi nhóm trước, nếu không nhóm sẽ còn id "ma"
   // và có thể mất trưởng nhóm (xem group.service.detachUserFromGroup).
   await detachUserFromGroup(user);
   await User.findByIdAndDelete(user._id);
+  if (user.avatarPublicId) await deleteAsset(user.avatarPublicId);
 };
 
 const changePassword = async (userId, { oldPassword, newPassword }) => {
@@ -72,8 +82,9 @@ const changePassword = async (userId, { oldPassword, newPassword }) => {
   }
 
   user.password = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
-  // Đổi mật khẩu phải huỷ các phiên cũ: refresh token đang lưu không dùng lại được.
+  // Đổi mật khẩu phải huỷ các phiên cũ: cả refresh token lẫn access token còn hạn.
   user.refreshToken = null;
+  user.tokenVersion = (user.tokenVersion || 0) + 1;
   await user.save();
 };
 

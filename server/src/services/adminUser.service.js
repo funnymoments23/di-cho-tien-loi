@@ -3,6 +3,7 @@ const User = require('../models/user.models');
 const RC = require('../constants/responseCode');
 const { fail } = require('../utils/response');
 const { toAdminUser } = require('../utils/serializers');
+const { deleteAsset } = require('../config/cloudinary');
 const { detachUserFromGroup } = require('./group.service');
 const { listUsersQuerySchema } = require('../validations/adminUser.validation');
 
@@ -101,6 +102,8 @@ const updateUser = async (actorId, userId, payload) => {
   const roleChanged = payload.role !== undefined && payload.role !== user.role;
   if (roleChanged && isSelf) throw fail(RC.ADMIN_USER_CANNOT_CHANGE_OWN_ROLE); // 00399
 
+  let oldAvatarPublicId = null;
+
   if (payload.email !== undefined && payload.email !== user.email) {
     const taken = await User.exists({ email: payload.email, _id: { $ne: user._id } });
     if (taken) throw fail(RC.ADMIN_USER_EMAIL_EXISTS); // 00397
@@ -126,7 +129,9 @@ const updateUser = async (actorId, userId, payload) => {
   }
 
   if (payload.avatar !== undefined) {
+    oldAvatarPublicId = user.avatarPublicId;
     user.avatar = payload.avatar === '' ? null : payload.avatar;
+    user.avatarPublicId = null;
   }
 
   if (roleChanged) user.refreshToken = null;
@@ -143,6 +148,8 @@ const updateUser = async (actorId, userId, payload) => {
     }
     throw err;
   }
+
+  if (oldAvatarPublicId) await deleteAsset(oldAvatarPublicId);
 
   return toAdminUser(user);
 };
@@ -184,6 +191,7 @@ const deleteUser = async (actorId, userId) => {
 
   await detachUserFromGroup(user);
   await User.findByIdAndDelete(user._id);
+  if (user.avatarPublicId) await deleteAsset(user.avatarPublicId);
 
   return { id: user._id };
 };

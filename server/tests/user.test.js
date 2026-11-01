@@ -11,6 +11,7 @@ jest.mock('../src/utils/email', () => ({
 // Không gọi Cloudinary thật khi test: trả về URL giả cố định.
 jest.mock('../src/config/cloudinary', () => ({
   isConfigured: () => true,
+  deleteAsset: jest.fn(async () => true),
   uploadBuffer: jest.fn(async () => ({
     secure_url: 'https://res.cloudinary.com/demo/image/upload/v1/avatars/avatar-test.png',
     public_id: 'avatars/avatar-test',
@@ -20,6 +21,7 @@ jest.mock('../src/config/cloudinary', () => ({
 const app = require('../src/app');
 const User = require('../src/models/user.models');
 const emailUtil = require('../src/utils/email');
+const cloudinaryConfig = require('../src/config/cloudinary');
 const RC = require('../src/constants/responseCode');
 
 const BASE = '/it4788/user';
@@ -242,6 +244,28 @@ describe(`PUT ${BASE} — sửa hồ sơ`, () => {
     expect(res.body.data.avatar).toMatch(/^https:\/\/res\.cloudinary\.com\/.+\.png$/);
   });
 
+  it('xoá asset Cloudinary cũ khi đổi avatar', async () => {
+    cloudinaryConfig.uploadBuffer.mockResolvedValueOnce({
+      secure_url: 'https://res.cloudinary.com/demo/image/upload/v1/avatars/old.png',
+      public_id: 'avatars/old',
+    });
+    await request(app)
+      .put(BASE)
+      .set(auth(ctx.token))
+      .attach('image', Buffer.from('fake-png-bytes'), 'old.png');
+
+    cloudinaryConfig.uploadBuffer.mockResolvedValueOnce({
+      secure_url: 'https://res.cloudinary.com/demo/image/upload/v1/avatars/new.png',
+      public_id: 'avatars/new',
+    });
+    await request(app)
+      .put(BASE)
+      .set(auth(ctx.token))
+      .attach('image', Buffer.from('fake-png-bytes'), 'new.png');
+
+    expect(cloudinaryConfig.deleteAsset).toHaveBeenCalledWith('avatars/old');
+  });
+
   it('00158 khi tệp tải lên không phải ảnh', async () => {
     const res = await request(app)
       .put(BASE)
@@ -356,6 +380,22 @@ describe(`DELETE ${BASE} — xoá tài khoản`, () => {
 
     const again = await request(app).get(BASE).set(auth(token));
     expect(again.body.code).toBe(RC.USER_NOT_FOUND.code);
+  });
+
+  it('xoá avatar Cloudinary khi xoá tài khoản', async () => {
+    const { token } = await createLoggedInUser();
+    cloudinaryConfig.uploadBuffer.mockResolvedValueOnce({
+      secure_url: 'https://res.cloudinary.com/demo/image/upload/v1/avatars/delete-me.png',
+      public_id: 'avatars/delete-me',
+    });
+    await request(app)
+      .put(BASE)
+      .set(auth(token))
+      .attach('image', Buffer.from('fake-png-bytes'), 'avatar.png');
+
+    await request(app).delete(BASE).set(auth(token));
+
+    expect(cloudinaryConfig.deleteAsset).toHaveBeenCalledWith('avatars/delete-me');
   });
 });
 

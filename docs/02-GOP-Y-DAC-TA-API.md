@@ -99,6 +99,8 @@ Hai mã này chứng tỏ API phải nhận `newQuantity`, nhưng bảng body đ
 
 Client không thể phân biệt hai lỗi này. **Đề xuất:** đổi mã thứ hai thành `00207b` hoặc cấp một mã trống chưa dùng (ví dụ `00209`).
 
+> **Đã xử lý:** backend dùng `00209` cho "Định dạng tên thức ăn mới không hợp lệ", giữ `00207` cho ghi chú.
+
 ### 2.2 Bảy mã có hậu tố chữ "x" không hợp lệ
 
 `00099x`, `00138x`, `00156x`, `00167x`, `00204x`, `00214x`, `00285x`
@@ -128,6 +130,8 @@ Riêng "server error" chiếm **17 mã khác nhau** cho cùng một tình huốn
 
 Không nhất quán, và `foodName` kém an toàn hơn (tên có thể đổi, có thể trùng hoa/thường). **Đề xuất:** dùng `itemId` cho cả hai.
 
+> **Đã xử lý:** `DELETE /fridge/:itemId` được bổ sung, client có thể dùng cùng khoá `itemId` với `PUT /fridge`.
+
 ### 2.5 `Get recipes by food id` dùng `foodId` trong khi toàn hệ thống dùng `foodName`
 
 Mọi API liên quan tới thực phẩm (`Create recipe`, `Create meal plan`, `Create fridge item`…) đều nhận `foodName`, riêng `GET recipe/?foodId` lại nhận id. Client sẽ phải gọi thêm một API chỉ để tra id. **Đề xuất:** thống nhất theo `foodName`, hoặc chuyển toàn bộ sang dùng id (an toàn hơn về lâu dài).
@@ -143,8 +147,16 @@ Theo RFC 7231, `DELETE` **có thể** mang body nhưng ngữ nghĩa không đư�
 ```
 DELETE /food/:id
 DELETE /fridge/:itemId
+DELETE /shopping/:listId
 DELETE /shopping/task/:taskId
+DELETE /meal/:planId
+DELETE /recipe/:recipeId
+DELETE /user/group/:username
+DELETE /admin/category/:name
+DELETE /admin/unit/:name
 ```
+
+> **Đã xử lý:** tất cả endpoint trên đều nhận path param; các route body cũ vẫn được giữ để không phá vỡ client hiện tại.
 
 ---
 
@@ -191,9 +203,10 @@ GET /report/waste?from=<ngày>&to=<ngày>        # thống kê thực phẩm b�
 ```
 
 > **Trạng thái triển khai (phương án B — ghi nhận sự kiện tối thiểu):** nhóm đã làm 5 endpoint `GET /report/overview`, `/shopping`, `/consumption`, `/waste`, `/fridge`.
-> - `Task` được bổ sung `completedAt` để biết món nào được mua trong khoảng thời gian.
-> - Thêm model `FridgeEvent`: mỗi lần xoá một mục khỏi tủ ghi lại `consumed` / `expired` / `discarded`, kèm tên thực phẩm, danh mục, đơn vị và số lượng tại thời điểm xoá — nhờ vậy báo cáo không mất dữ liệu khi thực phẩm bị đổi tên hoặc bị xoá.
+> - `Task` được bổ sung `completedAt` để biết món nào được mua trong khoảng thời gian. Báo cáo mua sắm phân biệt `items` (món tạo trong kỳ), `completedItems` (món được tick trong kỳ, kể cả tạo từ trước) và `createdCompletedItems` (món tạo và hoàn thành trong kỳ); nhờ vậy summary, series, byCategory và byAssignee luôn khớp nhau.
+> - Thêm model `FridgeEvent`: mỗi lần một mục rời tủ ghi lại `consumed` / `expired` / `discarded`, kèm tên thực phẩm, danh mục, đơn vị và số lượng tại thời điểm xoá — nhờ vậy báo cáo không mất dữ liệu khi thực phẩm bị đổi tên hoặc bị xoá. Xoá thực phẩm hoặc xoá nhóm cũng ghi sự kiện trước khi dọn dữ liệu.
 > - `DELETE /fridge` nhận thêm `reason` tuỳ chọn (`consumed` / `expired` / `discarded`); client cũ chỉ gửi `foodName` vẫn chạy, server suy ra lý do theo hạn sử dụng.
+> - `/report/waste` tính cả các mục đã hết hạn nhưng người dùng chưa xoá khỏi tủ, tránh bỏ sót lãng phí.
 > - Báo cáo mặc định 30 ngày gần nhất, tối đa 366 ngày, tính ngày theo giờ Việt Nam; phạm vi là nhóm của người đang đăng nhập.
 
 ### 3.4 Cập nhật device token cho push notification

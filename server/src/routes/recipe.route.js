@@ -72,4 +72,7 @@ router.delete(
   recipeController.deleteRecipe
 ); // 00376
 
+// DELETE /recipe/:recipeId — path param (khuyến nghị docs/02 mục 2.6).
+router.delete('/:recipeId', auth, recipeController.deleteRecipe); // 00376
+
 module.exports = router;

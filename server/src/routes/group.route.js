@@ -44,6 +44,9 @@ router.delete(
   groupController.removeMember
 );
 
+// DELETE /user/group/:username — path param (khuyến nghị docs/02 mục 2.6).
+router.delete('/:username', auth, groupAdmin(RC.GROUP_DELETE_MEMBER_NOT_ADMIN), groupController.removeMember); // 00106
+
 // POST /user/group/leave — thành viên tự rời nhóm (API bổ sung, 00108)
 router.post('/leave', auth, groupController.leaveGroup);
 

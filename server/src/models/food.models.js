@@ -8,6 +8,8 @@ const foodSchema = new mongoose.Schema({
   categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
   unitId:     { type: mongoose.Schema.Types.ObjectId, ref: 'Unit', required: true },
   image:      { type: String, default: null },
+  // public_id trên Cloudinary, dùng để xoá ảnh cũ khi đổi/xoá ảnh thực phẩm.
+  imagePublicId: { type: String, default: null },
   groupId:    { type: mongoose.Schema.Types.ObjectId, ref: 'Group', required: true },
   createdBy:  { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });

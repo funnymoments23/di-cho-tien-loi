@@ -62,14 +62,22 @@ const signToken = (payload, type, expiresIn) =>
  * Chỉ chứa thông tin tối thiểu, KHÔNG chứa dữ liệu nhạy cảm.
  */
 const signAccessToken = (user) =>
-  signToken({ sub: userIdOf(user), role: user.role || 'user' }, TOKEN_TYPE.ACCESS, ACCESS_EXPIRES_IN);
+  signToken(
+    { sub: userIdOf(user), role: user.role || 'user', ver: user.tokenVersion || 0 },
+    TOKEN_TYPE.ACCESS,
+    ACCESS_EXPIRES_IN
+  );
 
 /**
  * Refresh token: chỉ dùng cho POST /user/refresh-token.
  * Không mang role để nếu lộ cũng không dùng được như access token.
  */
 const signRefreshToken = (user) =>
-  signToken({ sub: userIdOf(user) }, TOKEN_TYPE.REFRESH, REFRESH_EXPIRES_IN);
+  signToken(
+    { sub: userIdOf(user), ver: user.tokenVersion || 0 },
+    TOKEN_TYPE.REFRESH,
+    REFRESH_EXPIRES_IN
+  );
 
 /**
  * Token xác minh email: trả về lúc đăng ký / gửi lại mã, sống 10 phút.

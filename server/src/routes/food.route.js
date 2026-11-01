@@ -68,4 +68,8 @@ router.delete(
   foodController.deleteFood
 ); // 00184
 
+// DELETE /food/:id — chuyển định danh sang path param (khuyến nghị docs/02 mục 2.6).
+// Giữ DELETE /food với body { foodName } để không phá vỡ client cũ.
+router.delete('/:id', auth, foodController.deleteFood); // 00184
+
 module.exports = router;

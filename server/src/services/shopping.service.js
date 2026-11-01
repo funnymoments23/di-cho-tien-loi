@@ -6,6 +6,7 @@ const User = require('../models/user.models');
 const Group = require('../models/group.models');
 const RC = require('../constants/responseCode');
 const { fail } = require('../utils/response');
+const { parsePagination, pageResult, applyPagination } = require('../utils/pagination');
 const { toPublicTask, toPublicShoppingList } = require('../utils/serializers');
 
 // Trả kèm người được giao / người tạo để client hiển thị trực tiếp.
@@ -75,12 +76,16 @@ const populateList = async (list) => {
  * GET /shopping/task — mọi danh sách đi chợ của nhóm, kèm các món cần mua.
  * Sắp xếp theo ngày đi chợ gần nhất; danh sách chưa chốt ngày nằm cuối.
  */
-const getShoppingLists = async (userId) => {
+const getShoppingLists = async (userId, filters = {}) => {
   const { group } = await loadGroupContext(userId, RC.TASK_GET_NOT_IN_GROUP); // 00288
 
-  const lists = await ShoppingList.find({ groupId: group._id })
+  const pagination = parsePagination(filters);
+  const listQuery = { groupId: group._id };
+  const total = pagination ? await ShoppingList.countDocuments(listQuery) : null;
+  const listFind = ShoppingList.find(listQuery)
     .populate(LIST_POPULATE)
     .sort({ date: 1, createdAt: 1 });
+  const lists = await applyPagination(listFind, pagination);
 
   const tasks = await Task.find({ listId: { $in: lists.map((list) => list._id) } })
     .populate(TASK_POPULATE)
@@ -93,9 +98,11 @@ const getShoppingLists = async (userId) => {
     tasksByList.get(key).push(task);
   }
 
-  return lists.map((list) =>
+  const result = lists.map((list) =>
     toPublicShoppingList(list, tasksByList.get(list._id.toString()) ?? [])
   );
+
+  return pagination ? pageResult(result, total, pagination) : result;
 };
 
 /**

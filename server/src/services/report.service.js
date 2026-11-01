@@ -20,6 +20,9 @@ const MAX_RANGE_DAYS = 366;
 // Cùng quy ước với cron nhắc hạn (jobs/expiryChecker.job.js).
 const DEFAULT_NOTIFY_DAYS = 3;
 
+const startOfUtcDay = (date) =>
+  new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+
 /** id lấy từ token luôn là ObjectId, vẫn kiểm tra để trả đúng mã thay vì CastError. */
 const assertValidId = (userId) => {
   if (!mongoose.isValidObjectId(userId)) throw fail(RC.INVALID_USER_ID); // 00007
@@ -112,12 +115,13 @@ const isInRange = (date, range) => {
 };
 
 /**
- * Một món được coi là "đã mua trong khoảng" khi đã tick và thời điểm tick nằm
- * trong khoảng. Dữ liệu cũ (tick trước khi có `completedAt`) vẫn được tính để
- * không làm sai lệch báo cáo lịch sử.
+ * Thời điểm hoàn thành: dữ liệu cũ có `isCompleted = true` nhưng chưa có
+ * `completedAt` được coi là hoàn thành tại thời điểm tạo món.
  */
+const completionTime = (task) => task.completedAt || (task.isCompleted ? task.createdAt : null);
+
 const isCompletedInRange = (task, range) =>
-  Boolean(task.isCompleted) && (!task.completedAt || isInRange(task.completedAt, range));
+  Boolean(task.isCompleted) && isInRange(completionTime(task), range);
 
 const sumBy = (items, field) =>
   items.reduce((total, item) => total + (Number(item[field]) || 0), 0);
@@ -161,16 +165,21 @@ const buildShoppingReport = async (groupId, range) => {
 
   const listsInRange = lists.filter((list) => isInRange(list.createdAt, range));
   const createdTasks = tasks.filter((task) => isInRange(task.createdAt, range));
-  const completedTasks = tasks.filter((task) => isInRange(task.completedAt, range));
+  const completedTasks = tasks.filter((task) => isCompletedInRange(task, range));
+  const createdCompletedTasks = createdTasks.filter((task) => isCompletedInRange(task, range));
 
   const items = createdTasks.length;
-  const completedItems = createdTasks.filter((task) => isCompletedInRange(task, range)).length;
+  const completedItems = completedTasks.length;
 
   const summary = {
     lists: listsInRange.length,
     items,
+    // Món được tick trong kỳ, kể cả món được tạo từ trước kỳ.
     completedItems,
-    completionRate: items === 0 ? 0 : roundRate(completedItems / items),
+    // Trong số món tạo trong kỳ, bao nhiêu món cũng được hoàn thành trong kỳ.
+    createdCompletedItems: createdCompletedTasks.length,
+    completionRate:
+      items === 0 ? 0 : roundRate(createdCompletedTasks.length / items),
   };
 
   // Chuỗi theo ngày để FE vẽ biểu đồ; ngày không có dữ liệu vẫn trả về 0.
@@ -191,29 +200,41 @@ const buildShoppingReport = async (groupId, range) => {
     if (entry) entry.itemsCreated += 1;
   }
   for (const task of completedTasks) {
-    const entry = seriesMap.get(toDateKey(task.completedAt));
+    const entry = seriesMap.get(toDateKey(completionTime(task)));
     if (entry) entry.itemsCompleted += 1;
   }
 
-  // Thống kê theo danh mục thực phẩm.
+  // Thống kê theo danh mục: một món có thể đóng góp "tạo trong kỳ" và/hoặc
+  // "hoàn thành trong kỳ"; nhờ vậy tổng luôn khớp summary và series.
   const categoryMap = new Map();
-  for (const task of createdTasks) {
+  for (const task of tasks) {
+    const created = isInRange(task.createdAt, range);
+    const completed = isCompletedInRange(task, range);
+    if (!created && !completed) continue;
+
     const name = task.foodId?.categoryId?.name ?? 'Khác';
     if (!categoryMap.has(name)) {
       categoryMap.set(name, { category: name, items: 0, completedItems: 0 });
     }
     const entry = categoryMap.get(name);
-    entry.items += 1;
-    if (isCompletedInRange(task, range)) entry.completedItems += 1;
+    if (created) entry.items += 1;
+    if (completed) entry.completedItems += 1;
   }
   const byCategory = [...categoryMap.values()].sort(
-    (a, b) => b.items - a.items || a.category.localeCompare(b.category, 'vi')
+    (a, b) =>
+      b.items - a.items ||
+      b.completedItems - a.completedItems ||
+      a.category.localeCompare(b.category, 'vi')
   );
 
   // Thống kê theo người được giao danh sách.
   const listById = new Map(lists.map((list) => [String(list._id), list]));
   const assigneeMap = new Map();
-  for (const task of createdTasks) {
+  for (const task of tasks) {
+    const created = isInRange(task.createdAt, range);
+    const completed = isCompletedInRange(task, range);
+    if (!created && !completed) continue;
+
     const list = listById.get(String(task.listId));
     const assignee = list?.assignedTo ?? null;
     const key = assignee?._id ? String(assignee._id) : 'unassigned';
@@ -231,8 +252,8 @@ const buildShoppingReport = async (groupId, range) => {
 
     const entry = assigneeMap.get(key);
     if (list) entry.listIds.add(String(list._id));
-    entry.items += 1;
-    if (isCompletedInRange(task, range)) entry.completedItems += 1;
+    if (created) entry.items += 1;
+    if (completed) entry.completedItems += 1;
   }
   const byAssignee = [...assigneeMap.values()]
     .map((entry) => ({
@@ -243,7 +264,7 @@ const buildShoppingReport = async (groupId, range) => {
       items: entry.items,
       completedItems: entry.completedItems,
     }))
-    .sort((a, b) => b.items - a.items);
+    .sort((a, b) => b.items - a.items || b.completedItems - a.completedItems);
 
   return {
     range: rangePayload(range),
@@ -317,30 +338,59 @@ const buildConsumptionReport = async (groupId, range) => {
 
 /** GET /report/waste — thực phẩm bị bỏ vì hết hạn hoặc bỏ dù còn hạn. */
 const buildWasteReport = async (groupId, range) => {
-  const [wasteEvents, consumedEvents] = await Promise.all([
+  const startOfToday = startOfUtcDay(new Date());
+
+  const [wasteEvents, consumedEvents, expiredInFridge] = await Promise.all([
     loadEvents(groupId, range, ['expired', 'discarded']),
     loadEvents(groupId, range, ['consumed']),
+    // Mục đã hết hạn nhưng người dùng chưa xoá khỏi tủ vẫn là lãng phí.
+    // Chỉ lấy mục có hạn trong khoảng báo cáo và đã qua ngày hôm nay.
+    FridgeItem.find({
+      groupId,
+      expiryDate: { $gte: range.from, $lte: range.to, $lt: startOfToday },
+    })
+      .populate({
+        path: 'foodId',
+        select: 'name categoryId unitId',
+        populate: [
+          { path: 'categoryId', select: 'name' },
+          { path: 'unitId', select: 'name' },
+        ],
+      })
+      .lean(),
   ]);
 
-  const wastedQuantity = sumBy(wasteEvents, 'quantity');
+  // Chuyển mục còn trong tủ thành sự kiện ảo để dùng chung phần tổng hợp.
+  const expiredItems = expiredInFridge.map((item) => ({
+    action: 'expired',
+    quantity: item.quantity,
+    foodName: item.foodId?.name ?? 'Không xác định',
+    categoryName: item.foodId?.categoryId?.name ?? null,
+    unitName: item.foodId?.unitId?.name ?? null,
+    // Dùng ngày hết hạn làm mốc thời gian của lãng phí.
+    createdAt: item.expiryDate,
+  }));
+
+  const wasteItems = [...wasteEvents, ...expiredItems];
+  const wastedQuantity = sumBy(wasteItems, 'quantity');
   const consumedQuantity = sumBy(consumedEvents, 'quantity');
   const totalHandled = wastedQuantity + consumedQuantity;
 
   return {
     range: rangePayload(range),
     summary: {
-      items: wasteEvents.length,
+      items: wasteItems.length,
       quantity: wastedQuantity,
       consumedQuantity,
       // Tỉ lệ lãng phí trên tổng số lượng đã xử lý (tiêu thụ + bỏ đi).
       wasteRate: totalHandled === 0 ? 0 : roundRate(wastedQuantity / totalHandled),
     },
-    series: buildEventSeries(wasteEvents, range),
-    byReason: groupEvents(wasteEvents, (event) => event.action),
-    byFood: groupEvents(wasteEvents, (event) => event.foodName, (event) => ({
+    series: buildEventSeries(wasteItems, range),
+    byReason: groupEvents(wasteItems, (event) => event.action),
+    byFood: groupEvents(wasteItems, (event) => event.foodName, (event) => ({
       unitName: event.unitName ?? null,
     })),
-    byCategory: groupEvents(wasteEvents, (event) => event.categoryName),
+    byCategory: groupEvents(wasteItems, (event) => event.categoryName),
   };
 };
 

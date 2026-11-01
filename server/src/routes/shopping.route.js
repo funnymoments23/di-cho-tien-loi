@@ -81,6 +81,9 @@ router.delete(
   shoppingController.deleteTask
 ); // 00299
 
+// DELETE /shopping/task/:taskId — path param (khuyến nghị docs/02 mục 2.6).
+router.delete('/task/:taskId', auth, shoppingController.deleteTask); // 00299
+
 // ===== Danh sách đi chợ (shopping) =====
 
 // GET /shopping — API bổ sung cùng dữ liệu với GET /shopping/task,
@@ -139,5 +142,8 @@ router.delete(
   }),
   shoppingController.deleteShoppingList
 ); // 00275
+
+// DELETE /shopping/:listId — path param (khuyến nghị docs/02 mục 2.6).
+router.delete('/:listId', auth, shoppingController.deleteShoppingList); // 00275
 
 module.exports = router;

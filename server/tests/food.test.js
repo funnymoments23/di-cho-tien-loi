@@ -11,6 +11,7 @@ jest.mock('../src/utils/email', () => ({
 // Không gọi Cloudinary thật khi test: trả về URL giả cố định.
 jest.mock('../src/config/cloudinary', () => ({
   isConfigured: () => true,
+  deleteAsset: jest.fn(async () => true),
   uploadBuffer: jest.fn(async () => ({
     secure_url: 'https://res.cloudinary.com/demo/image/upload/v1/foods/food-test.png',
     public_id: 'foods/food-test',
@@ -24,6 +25,7 @@ const Category = require('../src/models/category.models');
 const Unit = require('../src/models/unit.models');
 const Food = require('../src/models/food.models');
 const emailUtil = require('../src/utils/email');
+const cloudinaryConfig = require('../src/config/cloudinary');
 const RC = require('../src/constants/responseCode');
 
 const USER = '/it4788/user';
@@ -547,6 +549,30 @@ describe(`PUT ${FOOD} — sửa thực phẩm`, () => {
     expect(res.body.code).toBe(RC.FOOD_UPDATE_SUCCESS.code);
     expect(res.body.data.image).toMatch(/^https:\/\/res\.cloudinary\.com\/.+\.png$/);
   });
+
+  it('xoá asset Cloudinary cũ khi đổi ảnh thực phẩm', async () => {
+    cloudinaryConfig.uploadBuffer.mockResolvedValueOnce({
+      secure_url: 'https://res.cloudinary.com/demo/image/upload/v1/foods/old.png',
+      public_id: 'foods/old',
+    });
+    await request(app)
+      .put(FOOD)
+      .set(auth(ctx.member.token))
+      .field('foodName', 'Thịt bò')
+      .attach('image', Buffer.from('fake-png-bytes'), 'old.png');
+
+    cloudinaryConfig.uploadBuffer.mockResolvedValueOnce({
+      secure_url: 'https://res.cloudinary.com/demo/image/upload/v1/foods/new.png',
+      public_id: 'foods/new',
+    });
+    await request(app)
+      .put(FOOD)
+      .set(auth(ctx.member.token))
+      .field('foodName', 'Thịt bò')
+      .attach('image', Buffer.from('fake-png-bytes'), 'new.png');
+
+    expect(cloudinaryConfig.deleteAsset).toHaveBeenCalledWith('foods/old');
+  });
 });
 
 // =====================================================================
@@ -595,5 +621,24 @@ describe(`DELETE ${FOOD} — xoá thực phẩm`, () => {
     expect(res.status).toBe(200);
     expect(res.body.code).toBe(RC.FOOD_DELETE_SUCCESS.code);
     expect(await Food.countDocuments({})).toBe(0);
+  });
+
+  it('xoá ảnh Cloudinary khi xoá thực phẩm', async () => {
+    cloudinaryConfig.uploadBuffer.mockResolvedValueOnce({
+      secure_url: 'https://res.cloudinary.com/demo/image/upload/v1/foods/delete-me.png',
+      public_id: 'foods/delete-me',
+    });
+    await request(app)
+      .put(FOOD)
+      .set(auth(ctx.member.token))
+      .field('foodName', 'Thịt bò')
+      .attach('image', Buffer.from('fake-png-bytes'), 'delete-me.png');
+
+    await request(app)
+      .delete(FOOD)
+      .set(auth(ctx.member.token))
+      .send({ foodName: 'Thịt bò' });
+
+    expect(cloudinaryConfig.deleteAsset).toHaveBeenCalledWith('foods/delete-me');
   });
 });

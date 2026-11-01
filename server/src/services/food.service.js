@@ -10,6 +10,9 @@ const MealPlan = require('../models/mealPlan.models');
 const Recipe = require('../models/recipe.models');
 const RC = require('../constants/responseCode');
 const { fail } = require('../utils/response');
+const { parsePagination, pageResult, applyPagination } = require('../utils/pagination');
+const { deleteAsset } = require('../config/cloudinary');
+const { startOfUtcDay, recordFridgeRemoval } = require('../utils/fridgeEvent');
 const { toPublicFood } = require('../utils/serializers');
 
 // Luôn lấy kèm tên danh mục / đơn vị để response dễ dùng ở client.
@@ -61,6 +64,7 @@ const findFoodOrFail = async (groupId, foodName, notFoundCode) => {
  */
 const getFoods = async (userId, filters = {}) => {
   const { group } = await loadGroupContext(userId, RC.FOOD_GET_NOT_IN_GROUP); // 00185
+  const pagination = parsePagination(filters);
 
   // Query có thể là mảng nếu client gửi lặp tham số (?keyword=a&keyword=b):
   // chỉ nhận giá trị chuỗi để tránh lỗi truy vấn.
@@ -77,7 +81,7 @@ const getFoods = async (userId, filters = {}) => {
   if (categoryName) {
     const category = await Category.findOne({ name: categoryName });
     // Danh mục không tồn tại thì chắc chắn không có thực phẩm nào khớp.
-    if (!category) return [];
+    if (!category) return pagination ? pageResult([], 0, pagination) : [];
     query.categoryId = category._id;
   }
 
@@ -89,8 +93,13 @@ const getFoods = async (userId, filters = {}) => {
     query._id = inFridge === 'true' ? { $in: fridgeFoodIds } : { $nin: fridgeFoodIds };
   }
 
-  const foods = await Food.find(query).populate(FOOD_POPULATE).sort({ name: 1 });
-  return foods.map(toPublicFood);
+  const total = pagination ? await Food.countDocuments(query) : null;
+  const foodQuery = Food.find(query)
+    .populate(FOOD_POPULATE)
+    .sort({ name: 1 });
+  const foods = await applyPagination(foodQuery, pagination).then((items) => items.map(toPublicFood));
+
+  return pagination ? pageResult(foods, total, pagination) : foods;
 };
 
 /** GET /food/search — tìm theo từ khoá tên và/hoặc danh mục. */
@@ -100,7 +109,7 @@ const searchFoods = async (userId, filters = {}) => getFoods(userId, filters);
  * POST /food — tạo thực phẩm trong nhóm.
  * Thứ tự kiểm tra theo đặc tả: trùng tên (00151) -> đơn vị (00153) -> danh mục (00155).
  */
-const createFood = async (userId, { foodName, categoryName, unitName, image }) => {
+const createFood = async (userId, { foodName, categoryName, unitName, image, imagePublicId }) => {
   const { user, group } = await loadGroupContext(userId, RC.FOOD_CREATE_NOT_IN_GROUP); // 00156
 
   if (await Food.exists({ groupId: group._id, name: foodName })) {
@@ -119,6 +128,7 @@ const createFood = async (userId, { foodName, categoryName, unitName, image }) =
       categoryId: category._id,
       unitId: unit._id,
       image: image || null,
+      imagePublicId: imagePublicId || null,
       groupId: group._id,
       createdBy: user._id,
     });
@@ -137,7 +147,7 @@ const createFood = async (userId, { foodName, categoryName, unitName, image }) =
  * Chỉ người tạo hoặc trưởng nhóm được sửa (00167 — FORBIDDEN).
  */
 const updateFood = async (userId, payload) => {
-  const { foodName, newName, newCategory, newUnit, image } = payload;
+  const { foodName, newName, newCategory, newUnit, image, imagePublicId } = payload;
 
   const { user, group } = await loadGroupContext(userId, RC.FOOD_UPDATE_NOT_FOUND); // 00167
 
@@ -176,7 +186,11 @@ const updateFood = async (userId, payload) => {
     food.name = newName;
   }
 
-  if (image !== undefined) food.image = image || null;
+  const oldImagePublicId = image !== undefined ? food.imagePublicId : null;
+  if (image !== undefined) {
+    food.image = image || null;
+    food.imagePublicId = imagePublicId || null;
+  }
 
   try {
     await food.save();
@@ -185,18 +199,30 @@ const updateFood = async (userId, payload) => {
     throw err;
   }
 
+  if (oldImagePublicId && oldImagePublicId !== food.imagePublicId) {
+    await deleteAsset(oldImagePublicId);
+  }
+
   await food.populate(FOOD_POPULATE);
   return toPublicFood(food);
 };
 
 /**
- * DELETE /food — xoá thực phẩm theo tên.
+ * DELETE /food — xoá thực phẩm theo tên (body) hoặc theo id (path param).
  * Chỉ người tạo hoặc trưởng nhóm được xoá (00181).
  */
-const deleteFood = async (userId, { foodName }) => {
+const deleteFood = async (userId, { foodName, foodId } = {}) => {
   const { user, group } = await loadGroupContext(userId, RC.FOOD_DELETE_NOT_FOUND); // 00180
 
-  const food = await findFoodOrFail(group._id, foodName, RC.FOOD_DELETE_NOT_FOUND); // 00180
+  let food;
+  if (foodId) {
+    if (!mongoose.isValidObjectId(foodId)) throw fail(RC.ID_INVALID_OBJECT_ID); // 00023
+    food = await Food.findById(foodId);
+    if (!food) throw fail(RC.FOOD_DELETE_NOT_FOUND); // 00180
+    if (!food.groupId.equals(group._id)) throw fail(RC.FOOD_DELETE_NO_PERMISSION); // 00181
+  } else {
+    food = await findFoodOrFail(group._id, foodName, RC.FOOD_DELETE_NOT_FOUND); // 00180
+  }
 
   if (!canManageFood(food, user, group)) {
     throw fail(RC.FOOD_DELETE_NO_PERMISSION); // 00181
@@ -204,6 +230,17 @@ const deleteFood = async (userId, { foodName }) => {
 
   await food.populate(FOOD_POPULATE);
   const data = toPublicFood(food);
+
+  // Xoá thực phẩm cũng làm mục trong tủ biến mất: ghi lịch sử trước khi xoá
+  // để báo cáo tiêu thụ/lãng phí không bị mất dữ liệu.
+  const fridgeItems = await FridgeItem.find({ foodId: food._id });
+  const startOfToday = startOfUtcDay();
+  for (const item of fridgeItems) {
+    const action =
+      new Date(item.expiryDate).getTime() < startOfToday.getTime() ? 'expired' : 'discarded';
+    await recordFridgeRemoval(item, action, userId, food);
+  }
+
   await Food.deleteOne({ _id: food._id });
   // Dọn mục tủ lạnh / món trong danh sách đi chợ / kế hoạch bữa ăn / công thức
   // tham chiếu tới thực phẩm vừa xoá để không còn bản ghi mồ côi.
@@ -211,6 +248,7 @@ const deleteFood = async (userId, { foodName }) => {
   await Task.deleteMany({ foodId: food._id });
   await MealPlan.deleteMany({ foodId: food._id });
   await Recipe.deleteMany({ foodId: food._id });
+  if (food.imagePublicId) await deleteAsset(food.imagePublicId);
   return data;
 };
 

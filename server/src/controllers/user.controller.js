@@ -15,7 +15,8 @@ const updateProfile = async (req, res, next) => {
   try {
     // uploadAvatar (nếu có file) chạy trước validate và đã gán URL Cloudinary vào
     // req.body.avatar; file nằm ở field `image` theo đặc tả API.
-    const data = await userService.updateProfile(req.user.id, req.body);
+    const payload = { ...req.body, avatarPublicId: req.file?.publicId };
+    const data = await userService.updateProfile(req.user.id, payload);
     sendSuccess(res, RC.EDIT_USER_SUCCESS, data); // 00086
   } catch (err) {
     next(err);

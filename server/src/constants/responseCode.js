@@ -217,7 +217,8 @@ const RESPONSE_CODE = Object.freeze({
     FRIDGE_UPDATE_INVALID_USE_WITHIN: def('00205', BAD_REQUEST, "Vui lòng cung cấp một giá trị 'sử dụng trong' hợp lệ!"),
     FRIDGE_UPDATE_INVALID_QUANTITY: def('00206', BAD_REQUEST, 'Vui lòng cung cấp một lượng hợp lệ!'),
     FRIDGE_UPDATE_INVALID_NOTE: def('00207', BAD_REQUEST, 'Định dạng ghi chú mới không hợp lệ!'),
-    FRIDGE_UPDATE_INVALID_FOOD_NAME: def('00207', BAD_REQUEST, 'Định dạng tên thức ăn mới không hợp lệ!'),
+    // Tách khỏi 00207 để client phân biệt lỗi ghi chú và lỗi tên thực phẩm.
+    FRIDGE_UPDATE_INVALID_FOOD_NAME: def('00209', BAD_REQUEST, 'Định dạng tên thức ăn mới không hợp lệ!'),
     FRIDGE_UPDATE_FOOD_NOT_FOUND: def('00208', NOT_FOUND, 'Thực phẩm không tồn tại.'),
     FRIDGE_UPDATE_NOT_IN_GROUP: def('00210', FORBIDDEN, 'Người dùng không thuộc bất kỳ nhóm nào'),
     FRIDGE_UPDATE_NOT_ADMIN: def('00212', FORBIDDEN, 'Tủ lạnh không thuộc quản trị viên nhóm.'),
@@ -437,6 +438,24 @@ const RESPONSE_CODE = Object.freeze({
       '00406',
       BAD_REQUEST,
       'Khoảng thời gian không hợp lệ. Vui lòng cung cấp ngày dạng YYYY-MM-DD và from <= to.'
+    ),
+
+    // ===== Kiểm tra toàn vẹn dữ liệu / lỗi đầu vào chung =====
+    CATEGORY_DELETE_IN_USE: def(
+      '00407',
+      CONFLICT,
+      'Không thể xoá danh mục vì vẫn còn thực phẩm đang sử dụng danh mục này.'
+    ),
+    UNIT_DELETE_IN_USE: def(
+      '00408',
+      CONFLICT,
+      'Không thể xoá đơn vị vì vẫn còn thực phẩm đang sử dụng đơn vị này.'
+    ),
+    INVALID_JSON: def('00409', BAD_REQUEST, 'Dữ liệu JSON không hợp lệ.'),
+    PAGINATION_INVALID: def(
+      '00410',
+      BAD_REQUEST,
+      'Tham số phân trang không hợp lệ. page phải >= 1, limit từ 1 đến 100.'
     ),
 });
 

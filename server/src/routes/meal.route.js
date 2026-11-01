@@ -73,4 +73,7 @@ router.delete(
   mealController.deleteMealPlan
 ); // 00330
 
+// DELETE /meal/:planId — path param (khuyến nghị docs/02 mục 2.6).
+router.delete('/:planId', auth, mealController.deleteMealPlan); // 00330
+
 module.exports = router;

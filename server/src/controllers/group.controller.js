@@ -41,7 +41,8 @@ const addMember = async (req, res, next) => {
 
 const removeMember = async (req, res, next) => {
   try {
-    const data = await groupService.removeMember(req.group, req.body.username);
+    const username = req.params.username || req.body.username;
+    const data = await groupService.removeMember(req.group, username);
     sendSuccess(res, RC.GROUP_DELETE_MEMBER_SUCCESS, data); // 00106
   } catch (err) {
     next(err);

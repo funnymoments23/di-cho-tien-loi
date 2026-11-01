@@ -40,4 +40,21 @@ const uploadBuffer = (buffer, options = {}) => {
   });
 };
 
-module.exports = { cloudinary, isConfigured, uploadBuffer };
+/**
+ * Xoá một asset trên Cloudinary. Không ném lỗi để việc dọn ảnh cũ
+ * không làm hỏng thao tác chính. Trả false nếu chưa cấu hình/không có publicId.
+ */
+const deleteAsset = async (publicId) => {
+  if (!publicId || !isConfigured()) return false;
+  try {
+    await cloudinary.uploader.destroy(publicId);
+    return true;
+  } catch (err) {
+    if (process.env.NODE_ENV !== 'test') {
+      console.error(`[cloudinary] không xoá được asset ${publicId}:`, err.message);
+    }
+    return false;
+  }
+};
+
+module.exports = { cloudinary, isConfigured, uploadBuffer, deleteAsset };

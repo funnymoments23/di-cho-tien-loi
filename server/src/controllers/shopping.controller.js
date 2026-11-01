@@ -4,7 +4,7 @@ const RC = require('../constants/responseCode');
 
 const getShoppingLists = async (req, res, next) => {
   try {
-    const data = await shoppingService.getShoppingLists(req.user.id);
+    const data = await shoppingService.getShoppingLists(req.user.id, req.query);
     sendSuccess(res, RC.TASK_GET_SUCCESS, data); // 00292
   } catch (err) {
     next(err);
@@ -31,7 +31,8 @@ const updateShoppingList = async (req, res, next) => {
 
 const deleteShoppingList = async (req, res, next) => {
   try {
-    const data = await shoppingService.deleteShoppingList(req.user.id, req.body);
+    const payload = req.params.listId ? { listId: req.params.listId } : req.body;
+    const data = await shoppingService.deleteShoppingList(req.user.id, payload);
     sendSuccess(res, RC.SHOPPING_DELETE_SUCCESS, data); // 00275
   } catch (err) {
     next(err);
@@ -58,7 +59,8 @@ const updateTask = async (req, res, next) => {
 
 const deleteTask = async (req, res, next) => {
   try {
-    const data = await shoppingService.deleteTask(req.user.id, req.body);
+    const payload = req.params.taskId ? { taskId: req.params.taskId } : req.body;
+    const data = await shoppingService.deleteTask(req.user.id, payload);
     sendSuccess(res, RC.TASK_DELETE_SUCCESS, data); // 00299
   } catch (err) {
     next(err);

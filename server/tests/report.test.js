@@ -229,6 +229,7 @@ describe(`GET ${REPORT}/shopping — báo cáo mua sắm`, () => {
       lists: 0,
       items: 0,
       completedItems: 0,
+      createdCompletedItems: 0,
       completionRate: 0,
     });
     expect(res.body.data.series).toHaveLength(30);
@@ -252,6 +253,7 @@ describe(`GET ${REPORT}/shopping — báo cáo mua sắm`, () => {
       lists: 1,
       items: 2,
       completedItems: 1,
+      createdCompletedItems: 1,
       completionRate: 0.5,
     });
   });
@@ -319,6 +321,7 @@ describe(`GET ${REPORT}/shopping — báo cáo mua sắm`, () => {
       lists: 0,
       items: 0,
       completedItems: 0,
+      createdCompletedItems: 0,
       completionRate: 0,
     });
   });
@@ -349,6 +352,36 @@ describe(`GET ${REPORT}/shopping — báo cáo mua sắm`, () => {
     await completeTask(ctx.member.token, taskId, false);
     task = await Task.findById(taskId);
     expect(task.completedAt).toBeNull();
+  });
+
+  it('món tạo trước kỳ nhưng tick trong kỳ vẫn tính vào completedItems', async () => {
+    const list = await createList(ctx.groupAdmin.token);
+    const group = await Group.findOne({ adminId: ctx.groupAdmin.user.id });
+    const food = await Food.findOne({ groupId: group._id, name: 'Thịt bò' });
+    const oldTask = await Task.create({
+      listId: list.id,
+      foodId: food._id,
+      quantity: 1,
+      isCompleted: false,
+      createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+    });
+
+    await completeTask(ctx.member.token, oldTask._id, true);
+
+    const res = await getReport(ctx.groupAdmin.token, '/shopping', {
+      from: todayKey(),
+      to: todayKey(),
+    });
+
+    expect(res.body.data.summary).toEqual({
+      lists: 1,
+      items: 0,
+      completedItems: 1,
+      createdCompletedItems: 0,
+      completionRate: 0,
+    });
+    expect(res.body.data.byCategory).toEqual([{ category: 'Thịt', items: 0, completedItems: 1 }]);
+    expect(res.body.data.series.at(-1).itemsCompleted).toBe(1);
   });
 });
 
@@ -418,6 +451,47 @@ describe(`GET ${REPORT}/waste — báo cáo lãng phí`, () => {
       wasteRate: 1,
     });
     expect(res.body.data.byReason).toEqual([{ name: 'expired', items: 1, quantity: 2 }]);
+  });
+
+  it('mục đã hết hạn còn trong tủ vẫn được tính là lãng phí', async () => {
+    const expiredDate = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+    await createFridgeItem(ctx.member.token, {
+      foodName: 'Cà rốt',
+      quantity: 2,
+      useWithin: expiredDate,
+    });
+
+    const res = await getReport(ctx.groupAdmin.token, '/waste');
+
+    expect(res.body.data.summary).toMatchObject({
+      items: 1,
+      quantity: 2,
+      consumedQuantity: 0,
+      wasteRate: 1,
+    });
+    expect(res.body.data.byReason).toEqual([{ name: 'expired', items: 1, quantity: 2 }]);
+  });
+
+  it('xoá thực phẩm có mục trong tủ vẫn ghi FridgeEvent', async () => {
+    await createFridgeItem(ctx.member.token, {
+      foodName: 'Cà rốt',
+      quantity: 3,
+      useWithin: '2020-01-01',
+    });
+
+    const del = await request(app)
+      .delete(FOOD)
+      .set(auth(ctx.member.token))
+      .send({ foodName: 'Cà rốt' });
+    expect(del.status).toBe(200);
+
+    const event = await FridgeEvent.findOne({ foodName: 'Cà rốt' });
+    expect(event).toMatchObject({ action: 'expired', quantity: 3 });
+
+    const res = await getReport(ctx.groupAdmin.token, '/waste');
+    expect(res.body.data.summary).toMatchObject({ items: 1, quantity: 3 });
   });
 
   it('tính tỉ lệ lãng phí trên cả phần đã tiêu thụ', async () => {

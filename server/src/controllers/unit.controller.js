@@ -31,7 +31,8 @@ const updateUnit = async (req, res, next) => {
 
 const deleteUnit = async (req, res, next) => {
   try {
-    const data = await unitService.deleteUnit(req.body);
+    const name = req.params.name || req.body.name;
+    const data = await unitService.deleteUnit({ name });
     sendSuccess(res, RC.UNIT_DELETE_SUCCESS, data); // 00128
   } catch (err) {
     next(err);

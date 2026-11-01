@@ -31,7 +31,8 @@ const updateCategory = async (req, res, next) => {
 
 const deleteCategory = async (req, res, next) => {
   try {
-    const data = await categoryService.deleteCategory(req.body);
+    const name = req.params.name || req.body.name;
+    const data = await categoryService.deleteCategory({ name });
     sendSuccess(res, RC.CATEGORY_DELETE_SUCCESS, data); // 00146
   } catch (err) {
     next(err);

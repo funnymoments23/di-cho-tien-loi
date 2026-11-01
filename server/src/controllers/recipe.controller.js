@@ -31,7 +31,8 @@ const updateRecipe = async (req, res, next) => {
 
 const deleteRecipe = async (req, res, next) => {
   try {
-    const data = await recipeService.deleteRecipe(req.user.id, req.body);
+    const payload = req.params.recipeId ? { recipeId: req.params.recipeId } : req.body;
+    const data = await recipeService.deleteRecipe(req.user.id, payload);
     sendSuccess(res, RC.RECIPE_DELETE_SUCCESS, data); // 00376
   } catch (err) {
     next(err);

@@ -53,6 +53,9 @@ router.delete(
   categoryController.deleteCategory
 ); // 00146
 
+// DELETE /admin/category/:name — path param (khuyến nghị docs/02 mục 2.6).
+router.delete('/category/:name', auth, admin(), categoryController.deleteCategory); // 00146
+
 // ===== Nhóm Đơn vị đo (unit) =====
 router.get('/unit', auth, unitController.getUnits); // 00110
 
@@ -79,6 +82,9 @@ router.delete(
   validate(deleteUnitSchema, { fallback: RC.UNIT_DELETE_MISSING_NAME }), // 00123
   unitController.deleteUnit
 ); // 00128
+
+// DELETE /admin/unit/:name — path param (khuyến nghị docs/02 mục 2.6).
+router.delete('/unit/:name', auth, admin(), unitController.deleteUnit); // 00128
 
 // ===== Nhật ký hệ thống (admin/logs) =====
 // Nhóm API B.7: admin xem nhật ký các thao tác ghi/sửa/xoá của toàn hệ thống.

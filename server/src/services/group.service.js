@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Group = require('../models/group.models');
 const User = require('../models/user.models');
+const Food = require('../models/food.models');
 const FridgeItem = require('../models/fridgeItem.models');
 const ShoppingList = require('../models/shoppingList.models');
 const Task = require('../models/task.models');
@@ -8,6 +9,8 @@ const MealPlan = require('../models/mealPlan.models');
 const Recipe = require('../models/recipe.models');
 const RC = require('../constants/responseCode');
 const { fail } = require('../utils/response');
+const { deleteAsset } = require('../config/cloudinary');
+const { startOfUtcDay, recordFridgeRemoval } = require('../utils/fridgeEvent');
 const { toPublicUser, toPublicGroup } = require('../utils/serializers');
 
 /** id lấy từ token luôn là ObjectId, vẫn kiểm tra để trả đúng mã thay vì CastError. */
@@ -170,8 +173,33 @@ const detachUserFromGroup = async (user, preloadedGroup) => {
 
     if (remaining.length === 0) {
       await Group.deleteOne({ _id: group._id });
-      // Nhóm bị xoá thì dọn luôn đồ trong tủ lạnh, danh sách đi chợ,
+      // Nhóm bị xoá thì dọn luôn thực phẩm, đồ trong tủ lạnh, danh sách đi chợ,
       // kế hoạch bữa ăn và công thức nấu ăn của nhóm.
+      const foods = await Food.find({ groupId: group._id }).select('imagePublicId');
+      // Ghi lịch sử các mục trong tủ trước khi nhóm bị xoá.
+      const fridgeItems = await FridgeItem.find({ groupId: group._id }).populate({
+        path: 'foodId',
+        select: 'name categoryId unitId',
+        populate: [
+          { path: 'categoryId', select: 'name' },
+          { path: 'unitId', select: 'name' },
+        ],
+      });
+      const startOfToday = startOfUtcDay();
+      for (const item of fridgeItems) {
+        const action =
+          new Date(item.expiryDate).getTime() < startOfToday.getTime()
+            ? 'expired'
+            : 'discarded';
+        await recordFridgeRemoval(item, action, user._id);
+      }
+
+      await Food.deleteMany({ groupId: group._id });
+      await Promise.all(
+        foods
+          .filter((food) => food.imagePublicId)
+          .map((food) => deleteAsset(food.imagePublicId))
+      );
       await FridgeItem.deleteMany({ groupId: group._id });
       const listIds = await ShoppingList.distinct('_id', { groupId: group._id });
       await Task.deleteMany({ listId: { $in: listIds } });

@@ -21,9 +21,13 @@ const auth = async (req, res, next) => {
     const payload = verifyAccessToken(token); // ném AppError nếu hỏng
     if (!mongoose.isValidObjectId(payload.sub)) return next(fail(RC.TOKEN_INVALID));
 
-    const user = await User.findById(payload.sub).select('role isActive groupId');
+    const user = await User.findById(payload.sub).select('role isActive groupId tokenVersion');
     if (!user) return next(fail(RC.USER_NOT_FOUND)); // 00052
     if (user.isActive === false) return next(fail(RC.ACCOUNT_LOCKED)); // 00403
+    if ((payload.ver ?? 0) !== (user.tokenVersion ?? 0)) {
+      // Token được ký trước khi đổi/reset mật khẩu -> buộc đăng nhập lại.
+      return next(fail(RC.TOKEN_INVALID)); // 00012
+    }
 
     req.user = {
       id: payload.sub,
