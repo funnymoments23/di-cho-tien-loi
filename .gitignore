@@ -47,6 +47,14 @@ web-build/
 *.jks
 *.mobileprovision
 
+# Thư mục native do Expo CNG sinh ra (không sửa/commit thủ công)
+mobile/android/
+mobile/ios/
+
+# Khoá service account Firebase (tải lên EAS, không commit)
+firebase-adminsdk*.json
+google-service-account*.json
+
 # ===== IDE / trình soạn thảo =====
 .vscode/
 .idea/

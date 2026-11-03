@@ -20,8 +20,8 @@ nhắc nhở trước khi hết hạn, lên kế hoạch bữa ăn và lưu côn
 ```
 di-cho-tien-loi/
 ├── docs/        # tài liệu thiết kế
-├── server/      # backend Node.js + Express      (đang làm)
-├── mobile/      # ứng dụng React Native + Expo   (chưa khởi tạo)
+├── server/      # backend Node.js + Express
+├── mobile/      # ứng dụng React Native + Expo (xem mobile/BUILD.md)
 └── admin/       # trang quản trị web             (chưa khởi tạo)
 ```
 
@@ -145,9 +145,16 @@ di-cho-tien-loi/
 - **Tạo tài khoản admin** (`scripts/seed-admin.js`) — `npm run seed:admin` tạo mới hoặc nâng quyền tài khoản theo `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME`, `ADMIN_USERNAME` trong `.env`; tài khoản đã có được giữ `groupId`/`deviceToken` và được mở khoá, đặt lại mật khẩu, gán `role = admin`.
 - **Kiểm thử tự động**: 543 test (Auth + Quên mật khẩu + Tài khoản + Nhóm + Danh mục + Đơn vị + Quản trị người dùng + Nhật ký + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + rate limit + cron/push + seed admin + hardening), hiện **543/543 pass** — xem [báo cáo kiểm thử](test-report.md).
 
+### Đã làm — mobile (`mobile/`)
+
+- Auth: đăng nhập, đăng ký, xác minh email, quên/đặt lại mật khẩu, đổi mật khẩu (đăng xuất toàn bộ phiên sau khi đổi), refresh token tự động.
+- 5 tab: Trang chủ, Đi chợ, Tủ lạnh, Bữa ăn, Cá nhân; kèm Kho thực phẩm, Danh mục & đơn vị, Quản lý nhóm, Công thức (nhiều nguyên liệu + HTML), Báo cáo (7/30/90 ngày) và gợi ý món từ tủ.
+- Push notification: xin quyền, đăng ký `ExpoPushToken` với backend, channel `expiry`, bấm thông báo mở tab Tủ lạnh.
+- Build/release: EAS project `@funnymoments23/di-cho-tien-loi`, `eas.json` (development/preview/production), hướng dẫn chi tiết tại [mobile/BUILD.md](../mobile/BUILD.md).
+
 ### Chưa làm
 
-- Ứng dụng mobile và trang admin web.
+- Trang admin web.
 - Deploy backend lên Render/Railway và cấu hình biến môi trường production (đặc biệt `SMTP_*`).
 - Postman collection dùng chung trong repo.
 

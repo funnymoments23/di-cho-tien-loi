@@ -111,6 +111,11 @@ async function doRegister(requestPermission: boolean): Promise<PushState> {
       projectId ? { projectId } : undefined
     );
 
+    // Giúp thử push khi chạy development build: copy token từ log Metro.
+    if (__DEV__) {
+      console.info('[push] Expo push token:', result.data);
+    }
+
     await authApi.updateDeviceToken(result.data);
 
     return {

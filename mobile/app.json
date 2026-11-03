@@ -1,16 +1,19 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "Đi chợ tiện lợi",
+    "slug": "di-cho-tien-loi",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "mobile",
+    "scheme": "dichotienloi",
     "userInterfaceStyle": "light",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.dichotienloi.app",
+      "supportsTablet": false
     },
     "android": {
+      "package": "com.dichotienloi.app",
       "adaptiveIcon": {
         "backgroundColor": "#FFE9A9",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -47,6 +50,17 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "5a2d4ee3-3cfc-4876-9ed7-b3e301076e81"
+      }
+    },
+    "owner": "funnymoments23"
   }
 }
