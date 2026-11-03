@@ -15,7 +15,8 @@ const ingredientsSchema = Joi.array().items(ingredientSchema).max(50);
 
 /** POST /recipe — thêm công thức cho một món ăn của nhóm. */
 const createRecipeSchema = Joi.object({
-  foodName: foodNameSchema.required(),
+  // Không bắt buộc: app hiện cho phép tạo công thức chỉ với nguyên liệu.
+  foodName: foodNameSchema.allow('', null),
   name: recipeNameSchema.required(),
   description: descriptionSchema.required(),
   htmlContent: htmlContentSchema.required(),

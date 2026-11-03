@@ -120,8 +120,12 @@ const createRecipe = async (
 ) => {
   const { user, group } = await loadGroupContext(userId); // 00096
 
-  const food = await Food.findOne({ groupId: group._id, name: normalizeText(foodName) });
-  if (!food) throw fail(RC.RECIPE_CREATE_FOOD_NOT_FOUND); // 00354
+  const food = normalizeText(foodName)
+    ? await Food.findOne({ groupId: group._id, name: normalizeText(foodName) })
+    : null;
+  if (normalizeText(foodName) && !food) {
+    throw fail(RC.RECIPE_CREATE_FOOD_NOT_FOUND); // 00354
+  }
 
   const resolvedIngredients = await resolveIngredients(
     group._id,
@@ -130,7 +134,7 @@ const createRecipe = async (
   );
 
   const recipe = await Recipe.create({
-    foodId: food._id,
+    foodId: food?._id ?? null,
     groupId: group._id,
     name,
     description,

@@ -4,7 +4,8 @@ const mongoose = require('mongoose');
 // `htmlContent` là nội dung chi tiết dạng HTML để app render bằng
 // react-native-render-html (docs/01 mục 2.2).
 const recipeSchema = new mongoose.Schema({
-  foodId:      { type: mongoose.Schema.Types.ObjectId, ref: 'Food', required: true },
+  // Có thể null: công thức không bắt buộc gắn với một món ăn cụ thể.
+  foodId:      { type: mongoose.Schema.Types.ObjectId, ref: 'Food', default: null },
   // Thực phẩm đã thuộc một nhóm; lưu thêm groupId để lọc công thức theo nhóm
   // mà không phải join qua foods mỗi lần.
   groupId:     { type: mongoose.Schema.Types.ObjectId, ref: 'Group', required: true },

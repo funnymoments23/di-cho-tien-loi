@@ -192,10 +192,11 @@ Do **admin hệ thống** quản lý. Trường: `name` (String, unique).
 
 | Trường | Kiểu | Ghi chú |
 |---|---|---|
-| `foodId` | ObjectId → foods | công thức gắn với món ăn nào |
+| `foodId` | ObjectId → foods, có thể null | món ăn chính (không bắt buộc) |
 | `name` | String | tên công thức |
 | `description` | String | mô tả ngắn |
 | `htmlContent` | String | nội dung chi tiết dạng HTML, app render bằng `react-native-render-html` |
+| `ingredients` | [{ `foodId`, `quantity` }] | danh sách nguyên liệu; đơn vị lấy theo thực phẩm |
 
 #### `fridgeevents` — lịch sử mục rời khỏi tủ lạnh (nguồn báo cáo tiêu thụ / lãng phí)
 

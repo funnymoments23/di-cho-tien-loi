@@ -172,10 +172,11 @@ describe(`POST ${RECIPE} — thêm công thức`, () => {
     expect(res.body.code).toBe(RC.RECIPE_CREATE_MISSING_FIELDS.code);
   });
 
-  it('00349 khi foodName rỗng', async () => {
+  it('tạo công thức không gắn món ăn', async () => {
     const res = await createRecipeRequest(ctx.member.token, { foodName: '   ' });
-    expect(res.status).toBe(400);
-    expect(res.body.code).toBe(RC.RECIPE_CREATE_MISSING_FIELDS.code);
+    expect(res.status).toBe(201);
+    expect(res.body.data.foodId).toBeNull();
+    expect(res.body.data.foodName).toBeNull();
   });
 
   it('00351 khi tên công thức quá 200 ký tự', async () => {

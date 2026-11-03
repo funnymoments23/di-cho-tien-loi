@@ -116,10 +116,10 @@ di-cho-tien-loi/
   - Nền tảng: model `MealPlan` (`groupId`, `foodId`, `timestamp`, `name`), index `{ groupId, timestamp }`; tên bữa được chuẩn hoá về `sáng`/`trưa`/`tối`.
 - **Nhóm API Công thức** (`routes/recipe.route.js`, 4 endpoint) — công thức nấu ăn gắn với thực phẩm của nhóm; mọi thành viên quản lý.
   - `GET /recipe` — danh sách công thức, lọc `?foodId=` (đặc tả) hoặc `?foodName=` (`00378`; chưa vào nhóm `00096`).
-  - `POST /recipe` — `{ foodName, name, description, htmlContent }` (`00357`; thiếu trường `00349`, tên/mô tả/HTML sai `00351`–`00353`, thực phẩm không tồn tại `00354`).
-  - `PUT /recipe` — `{ recipeId, newFoodName?, newName?, newDescription?, newHtmlContent? }` (`00370`; thiếu `recipeId` `00359`, không có trường cập nhật `00360`, trường mới sai `00361`–`00364`, không tìm thấy `00365`, thực phẩm mới không tồn tại `00367`).
+  - `POST /recipe` — `{ name, description, htmlContent, ingredients?, foodName? }` (`00357`; thiếu trường `00349`, tên/mô tả/HTML sai `00351`–`00353`, thực phẩm không tồn tại `00354`). `foodName` không bắt buộc; `ingredients` là mảng `{ foodName, quantity }` (tối đa 50).
+  - `PUT /recipe` — `{ recipeId, newFoodName?, newName?, newDescription?, newHtmlContent?, newIngredients? }` (`00370`; thiếu `recipeId` `00359`, không có trường cập nhật `00360`, trường mới sai `00361`–`00364`, không tìm thấy `00365`, thực phẩm mới không tồn tại `00367`).
   - `DELETE /recipe` — `{ recipeId }` hoặc `DELETE /recipe/:recipeId` (`00376`; thiếu `recipeId` `00371`, sai định dạng `00372`, không tìm thấy `00373`).
-  - Nền tảng: model `Recipe` (`foodId`, `groupId`, `name`, `description`, `htmlContent`), serializer `toPublicRecipe`; xoá thực phẩm hoặc xoá nhóm cũng dọn kế hoạch bữa ăn / công thức liên quan.
+  - Nền tảng: model `Recipe` (`foodId` có thể null, `groupId`, `name`, `description`, `htmlContent`, `ingredients[]`), serializer `toPublicRecipe` trả kèm tên/ảnh/đơn vị từng nguyên liệu; xoá thực phẩm hoặc xoá nhóm cũng dọn kế hoạch bữa ăn / công thức liên quan, đồng thời gỡ thực phẩm khỏi nguyên liệu các công thức khác.
 - **Nhóm API Báo cáo** (`routes/report.route.js`, 5 endpoint) — thống kê theo đề mục B.6, ghi nhận dữ liệu theo hướng "sự kiện tối thiểu" (phương án B).
   - `GET /report/overview?from=&to=` — gộp số liệu mua sắm / tiêu thụ / lãng phí / tủ lạnh trong một request (`00380`; chưa vào nhóm `00385`, khoảng ngày sai `00386`).
   - `GET /report/shopping?from=&to=` — số danh sách, số món tạo trong kỳ, số món đã mua trong kỳ (kể cả món tạo từ trước), `createdCompletedItems`, tỉ lệ hoàn thành của món tạo trong kỳ, chuỗi theo ngày, theo danh mục và người được giao (`00381`).

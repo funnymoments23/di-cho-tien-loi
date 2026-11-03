@@ -7,7 +7,6 @@ export type RecipeIngredientInput = {
 };
 
 export type CreateRecipePayload = {
-  foodName: string;
   name: string;
   description: string;
   htmlContent: string;

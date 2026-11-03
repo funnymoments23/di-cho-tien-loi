@@ -57,7 +57,6 @@ export default function RecipesScreen() {
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<Recipe | null>(null);
-  const [foodName, setFoodName] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [ingredients, setIngredients] = useState<IngredientRow[]>([
@@ -100,7 +99,6 @@ export default function RecipesScreen() {
 
   const openCreate = () => {
     setEditing(null);
-    setFoodName('');
     setName('');
     setDescription('');
     setIngredients([newIngredientRow()]);
@@ -111,7 +109,6 @@ export default function RecipesScreen() {
 
   const openEdit = (recipe: Recipe) => {
     setEditing(recipe);
-    setFoodName(recipe.foodName ?? '');
     setName(recipe.name);
     setDescription(recipe.description);
     const recipeIngredients = recipe.ingredients ?? [];
@@ -167,10 +164,6 @@ export default function RecipesScreen() {
     const trimmedDescription = description.trim();
     const trimmedSteps = steps.trim();
 
-    if (!foodName) {
-      setEditorError('Vui lòng chọn món ăn.');
-      return;
-    }
     if (!trimmedName) {
       setEditorError('Vui lòng nhập tên công thức.');
       return;
@@ -247,7 +240,6 @@ export default function RecipesScreen() {
         );
 
       const changed =
-        foodName !== (editing.foodName ?? '') ||
         trimmedName !== editing.name ||
         trimmedDescription !== editing.description ||
         stepsChanged ||
@@ -262,9 +254,6 @@ export default function RecipesScreen() {
       try {
         await recipeApi.update({
           recipeId: editing.id,
-          ...(foodName !== (editing.foodName ?? '')
-            ? { newFoodName: foodName }
-            : {}),
           ...(trimmedName !== editing.name ? { newName: trimmedName } : {}),
           ...(trimmedDescription !== editing.description
             ? { newDescription: trimmedDescription }
@@ -288,7 +277,6 @@ export default function RecipesScreen() {
     setSaving(true);
     try {
       await recipeApi.create({
-        foodName,
         name: trimmedName,
         description: trimmedDescription,
         htmlContent,
@@ -344,7 +332,6 @@ export default function RecipesScreen() {
           title="Công thức"
           subtitle={`${recipes.length} công thức trong nhóm`}
           onBack={() => router.back()}
-          right={<LinkText onPress={openCreate}>Thêm</LinkText>}
         />
 
         {notice ? <FormMessage type="success" message={notice} /> : null}
@@ -385,57 +372,68 @@ export default function RecipesScreen() {
             icon="search-outline"
           />
         ) : (
-          filtered.map((recipe) => (
-            <SectionCard key={recipe.id}>
-              <Pressable
-                onPress={() =>
-                  router.push({
-                    pathname: '/recipes/[recipeId]',
-                    params: { recipeId: recipe.id },
-                  })
-                }
-                style={styles.recipeRow}
-              >
-                <Thumbnail
-                  uri={recipe.image}
-                  label={recipe.foodName ?? recipe.name}
-                  size={56}
-                />
-                <View style={styles.recipeBody}>
-                  <Text style={styles.recipeName} numberOfLines={2}>
-                    {recipe.name}
-                  </Text>
-                  <Text style={styles.recipeMeta} numberOfLines={1}>
-                    {recipe.foodName ?? 'Chưa gắn món ăn'} ·{' '}
-                    {(recipe.ingredients ?? []).length} nguyên liệu
-                  </Text>
-                  <Text style={styles.recipeDescription} numberOfLines={2}>
-                    {recipe.description}
-                  </Text>
-                </View>
-              </Pressable>
-
-              <View style={styles.cardActions}>
-                <LinkText
+          <>
+            {filtered.map((recipe) => (
+              <SectionCard key={recipe.id}>
+                <Pressable
                   onPress={() =>
                     router.push({
                       pathname: '/recipes/[recipeId]',
                       params: { recipeId: recipe.id },
                     })
                   }
+                  style={styles.recipeRow}
                 >
-                  Xem
-                </LinkText>
-                <View style={styles.adminActions}>
-                  <LinkText onPress={() => openEdit(recipe)}>Sửa</LinkText>
-                  <LinkText onPress={() => confirmRemove(recipe)}>
-                    {deletingId === recipe.id ? 'Đang xoá...' : 'Xoá'}
+                  <Thumbnail
+                    uri={recipe.image}
+                    label={recipe.foodName ?? recipe.name}
+                    size={56}
+                  />
+                  <View style={styles.recipeBody}>
+                    <Text style={styles.recipeName} numberOfLines={2}>
+                      {recipe.name}
+                    </Text>
+                    <Text style={styles.recipeMeta} numberOfLines={1}>
+                      {(recipe.ingredients ?? []).length} nguyên liệu
+                    </Text>
+                    <Text style={styles.recipeDescription} numberOfLines={2}>
+                      {recipe.description}
+                    </Text>
+                  </View>
+                </Pressable>
+
+                <View style={styles.cardActions}>
+                  <LinkText
+                    onPress={() =>
+                      router.push({
+                        pathname: '/recipes/[recipeId]',
+                        params: { recipeId: recipe.id },
+                      })
+                    }
+                  >
+                    Xem
                   </LinkText>
+                  <View style={styles.adminActions}>
+                    <LinkText onPress={() => openEdit(recipe)}>Sửa</LinkText>
+                    <LinkText onPress={() => confirmRemove(recipe)}>
+                      {deletingId === recipe.id ? 'Đang xoá...' : 'Xoá'}
+                    </LinkText>
+                  </View>
                 </View>
-              </View>
-            </SectionCard>
-          ))
+              </SectionCard>
+            ))}
+          </>
         )}
+
+        {!recipesQuery.isLoading &&
+        !recipesQuery.isError &&
+        recipes.length > 0 ? (
+          <AppButton
+            title="Thêm công thức"
+            onPress={openCreate}
+            style={styles.addRecipeButton}
+          />
+        ) : null}
       </Screen>
 
       <Modal
@@ -458,7 +456,7 @@ export default function RecipesScreen() {
                 {editing ? 'Sửa công thức' : 'Thêm công thức'}
               </Text>
               <Text style={styles.modalHint}>
-                Chọn món ăn, thêm nguyên liệu và nhập cách làm. Mỗi bước một dòng.
+                Thêm nguyên liệu và nhập cách làm. Mỗi bước một dòng.
               </Text>
 
               {foodsQuery.isLoading ? (
@@ -469,14 +467,6 @@ export default function RecipesScreen() {
                   message="Kho thực phẩm đang trống. Thêm thực phẩm trước khi tạo công thức."
                 />
               ) : null}
-
-              <SelectField
-                label="Món ăn"
-                value={foodName}
-                placeholder="Chọn món ăn"
-                options={foodOptions}
-                onChange={setFoodName}
-              />
 
               <AppInput
                 label="Tên công thức"
@@ -551,7 +541,7 @@ export default function RecipesScreen() {
                 label="Cách làm"
                 value={steps}
                 onChangeText={setSteps}
-                placeholder="Mỗi bước một dòng, ví dụ:&#10;Sơ chế nguyên liệu&#10;Ướp gia vị 15 phút&#10;Kho lửa nhỏ 30 phút"
+                placeholder="Cách làm"
                 multiline
                 numberOfLines={8}
                 maxLength={200000}
@@ -566,7 +556,7 @@ export default function RecipesScreen() {
                 title="Lưu"
                 onPress={save}
                 loading={saving}
-                disabled={!foodName || !name || !description || !steps}
+                disabled={!name || !description || !steps}
               />
               <AppButton
                 title="Huỷ"
@@ -617,6 +607,9 @@ const styles = StyleSheet.create({
   adminActions: {
     flexDirection: 'row',
     gap: spacing.md,
+  },
+  addRecipeButton: {
+    marginTop: spacing.lg,
   },
   modalOverlay: {
     flex: 1,

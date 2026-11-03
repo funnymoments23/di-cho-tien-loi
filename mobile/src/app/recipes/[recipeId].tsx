@@ -12,7 +12,7 @@ import {
   ErrorState,
   LoadingState,
 } from '@/components/ui/StateView';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing, typography } from '@/theme';
 import { getErrorMessage } from '@/utils/error';
 
 export default function RecipeDetailScreen() {
@@ -67,7 +67,7 @@ export default function RecipeDetailScreen() {
     >
       <ScreenHeader
         title={recipe?.name ?? 'Công thức'}
-        subtitle={recipe?.foodName ?? 'Chi tiết công thức'}
+        subtitle="Chi tiết công thức"
         onBack={() => router.back()}
       />
 
@@ -94,9 +94,6 @@ export default function RecipeDetailScreen() {
       ) : (
         <>
           <SectionCard>
-            <Text style={styles.foodName}>
-              {recipe.foodName ?? 'Chưa gắn món ăn'}
-            </Text>
             <Text style={styles.description}>{recipe.description}</Text>
           </SectionCard>
 
@@ -162,11 +159,6 @@ export default function RecipeDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  foodName: {
-    ...typography.label,
-    color: colors.primaryText,
-    marginBottom: spacing.sm,
-  },
   description: {
     ...typography.body,
     color: colors.text,
