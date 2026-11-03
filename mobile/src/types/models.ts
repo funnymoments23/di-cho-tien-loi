@@ -188,3 +188,104 @@ export type ReportOverview = {
     expired: number;
   };
 };
+
+export type ReportRangeFilter = {
+  from?: string;
+  to?: string;
+};
+
+export type ReportRange = {
+  from: string;
+  to: string;
+  days: number;
+};
+
+export type ReportEventSeriesPoint = {
+  date: string;
+  items: number;
+  quantity: number;
+};
+
+export type ReportEventBreakdown = {
+  name: string;
+  items: number;
+  quantity: number;
+  unitName?: string | null;
+};
+
+export type ReportShoppingSeriesPoint = {
+  date: string;
+  lists: number;
+  itemsCreated: number;
+  itemsCompleted: number;
+};
+
+export type ReportShopping = {
+  range: ReportRange;
+  summary: {
+    lists: number;
+    items: number;
+    completedItems: number;
+    createdCompletedItems: number;
+    completionRate: number;
+  };
+  series: ReportShoppingSeriesPoint[];
+  byCategory: { category: string; items: number; completedItems: number }[];
+  byAssignee: {
+    userId: string | null;
+    name: string | null;
+    username: string | null;
+    lists: number;
+    items: number;
+    completedItems: number;
+  }[];
+};
+
+export type ReportConsumption = {
+  range: ReportRange;
+  summary: {
+    items: number;
+    quantity: number;
+  };
+  series: ReportEventSeriesPoint[];
+  byFood: ReportEventBreakdown[];
+  byCategory: ReportEventBreakdown[];
+};
+
+export type ReportWaste = {
+  range: ReportRange;
+  summary: {
+    items: number;
+    quantity: number;
+    consumedQuantity: number;
+    wasteRate: number;
+  };
+  series: ReportEventSeriesPoint[];
+  byReason: ReportEventBreakdown[];
+  byFood: ReportEventBreakdown[];
+  byCategory: ReportEventBreakdown[];
+};
+
+export type ReportFridgeItem = {
+  id: string;
+  foodId: string | null;
+  foodName: string | null;
+  categoryName: string | null;
+  unitName: string | null;
+  quantity: number;
+  expiryDate: string;
+  location: string | null;
+  status: 'expired' | 'expiringSoon' | 'fresh';
+};
+
+export type ReportFridge = {
+  summary: {
+    totalItems: number;
+    totalQuantity: number;
+    expiringSoon: number;
+    expired: number;
+  };
+  byLocation: { name: string; items: number; quantity: number }[];
+  byCategory: { name: string; items: number; quantity: number }[];
+  items: ReportFridgeItem[];
+};

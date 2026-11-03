@@ -18,6 +18,7 @@ import { BeVietnamPro_700Bold } from '@expo-google-fonts/be-vietnam-pro/700Bold'
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuthStore } from '../store/authStore';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { colors } from '@/theme';
 
 SplashScreen.preventAutoHideAsync();
@@ -53,6 +54,9 @@ export default function RootLayout() {
     BeVietnamPro_700Bold,
   });
 
+  // Đăng ký nhận thông báo đẩy sau khi đăng nhập (token được gửi lên backend).
+  usePushNotifications({ enabled: Boolean(hydrated && accessToken) });
+
   useEffect(() => {
     hydrate();
   }, []);
@@ -70,6 +74,8 @@ export default function RootLayout() {
     const inFood = segments[0] === 'food';
     const inShoppingDetail = segments[0] === 'shopping';
     const inRecipes = segments[0] === 'recipes';
+    const inReports = segments[0] === 'reports';
+    const inChangePassword = segments[0] === 'change-password';
     if (!accessToken && !inAuth) router.replace('/(auth)/login');
     if (
       accessToken &&
@@ -78,7 +84,9 @@ export default function RootLayout() {
       !inCatalog &&
       !inFood &&
       !inShoppingDetail &&
-      !inRecipes
+      !inRecipes &&
+      !inReports &&
+      !inChangePassword
     ) {
       router.replace('/(tabs)');
     }

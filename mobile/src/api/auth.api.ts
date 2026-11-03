@@ -84,4 +84,18 @@ export const authApi = {
       url: '/user/reset-password',
       data: { code, token, newPassword },
     }),
+
+  changePassword: (oldPassword: string, newPassword: string) =>
+    request<null>({
+      method: 'POST',
+      url: '/user/change-password',
+      data: { oldPassword, newPassword },
+    }),
+
+  updateDeviceToken: (deviceToken: string) =>
+    request<null>({
+      method: 'PUT',
+      url: '/user/device-token',
+      data: { deviceToken },
+    }),
 };

@@ -22,6 +22,7 @@ import { Screen, ScreenHeader } from '@/components/ui/Screen';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { Thumbnail } from '@/components/ui/Thumbnail';
 import { useAuthStore } from '@/store/authStore';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { colors, radius, spacing, typography } from '@/theme';
 import { getErrorMessage } from '@/utils/error';
 
@@ -43,6 +44,26 @@ export default function ProfileScreen() {
     queryFn: groupApi.info,
     retry: false,
   });
+
+  // Không tự bật popup xin quyền ở màn này; chỉ phản ánh trạng thái hiện tại
+  // và cho người dùng chủ động bật lại nếu trước đó đã từ chối.
+  const notifications = usePushNotifications({
+    enabled: true,
+    autoRequest: false,
+  });
+
+  const notificationStatus =
+    notifications.status === 'granted'
+      ? 'Đang nhận thông báo thực phẩm sắp hết hạn.'
+      : notifications.status === 'denied'
+        ? 'Bạn chưa cấp quyền thông báo.'
+        : notifications.status === 'loading'
+          ? 'Đang kiểm tra quyền thông báo...'
+          : notifications.status === 'unsupported'
+            ? 'Thiết bị hiện tại không hỗ trợ thông báo đẩy.'
+            : notifications.status === 'error'
+              ? notifications.message
+              : 'Chưa đăng ký nhận thông báo.';
 
   const noGroup =
     groupQuery.error instanceof ApiError && groupQuery.error.code === '00096';
@@ -243,6 +264,40 @@ export default function ProfileScreen() {
         ) : null}
       </SectionCard>
 
+      <SectionCard title="Bảo mật & thông báo">
+        <Text style={styles.muted}>
+          Đổi mật khẩu hoặc bật nhắc nhở khi thực phẩm trong tủ sắp hết hạn.
+        </Text>
+        <AppButton
+          title="Đổi mật khẩu"
+          onPress={() => router.push('/change-password')}
+          variant="outline"
+          style={styles.groupAction}
+        />
+        <Text style={styles.notificationStatus}>{notificationStatus}</Text>
+        {notifications.status === 'denied' ||
+        notifications.status === 'error' ? (
+          <AppButton
+            title="Bật thông báo"
+            onPress={() => void notifications.register(true)}
+            variant="outline"
+            style={styles.groupAction}
+          />
+        ) : null}
+      </SectionCard>
+
+      <SectionCard title="Báo cáo & thống kê">
+        <Text style={styles.muted}>
+          Xem báo cáo mua sắm, tiêu thụ và lãng phí thực phẩm của gia đình.
+        </Text>
+        <AppButton
+          title="Mở báo cáo"
+          onPress={() => router.push('/reports')}
+          variant="outline"
+          style={styles.groupAction}
+        />
+      </SectionCard>
+
       <SectionCard title="Dữ liệu dùng chung">
         <Text style={styles.muted}>
           Danh mục và đơn vị đo dùng để phân loại thực phẩm trong kho và tủ lạnh.
@@ -382,6 +437,11 @@ const styles = StyleSheet.create({
     color: colors.danger,
   },
   groupAction: {
+    marginTop: spacing.md,
+  },
+  notificationStatus: {
+    ...typography.caption,
+    color: colors.textMuted,
     marginTop: spacing.md,
   },
   logout: {

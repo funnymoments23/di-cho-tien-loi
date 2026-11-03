@@ -214,6 +214,39 @@ export default function HomeScreen() {
               ))
             )}
           </SectionCard>
+
+          <SectionCard title="Công thức nấu ăn">
+            <Text style={styles.cardHint}>
+              Xem cách nấu các món của gia đình hoặc thêm công thức mới.
+            </Text>
+            <AppButton
+              title="Mở công thức"
+              onPress={() => router.push('/recipes')}
+              variant="outline"
+              style={styles.navButton}
+            />
+          </SectionCard>
+
+          <SectionCard title="Báo cáo & thống kê">
+            <View style={styles.statsRow}>
+              <StatTile
+                label="Đã tiêu thụ"
+                value={reportQuery.data?.consumption.items ?? 0}
+                tone="success"
+              />
+              <StatTile
+                label="Tỉ lệ lãng phí"
+                value={`${Math.round((reportQuery.data?.waste.wasteRate ?? 0) * 100)}%`}
+                tone="warning"
+              />
+            </View>
+            <AppButton
+              title="Xem báo cáo"
+              onPress={() => router.push('/reports')}
+              variant="outline"
+              style={styles.navButton}
+            />
+          </SectionCard>
         </>
       )}
     </Screen>
@@ -246,6 +279,9 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     gap: spacing.sm,
+  },
+  navButton: {
+    marginTop: spacing.md,
   },
   cardHint: {
     ...typography.caption,
