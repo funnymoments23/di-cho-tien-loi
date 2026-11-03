@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, typography } from '@/theme';
@@ -14,6 +15,12 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        animation: 'fade',
+        transitionSpec: {
+          animation: 'timing',
+          config: { duration: 180 },
+        },
+        sceneStyle: { backgroundColor: colors.background },
         tabBarActiveTintColor: colors.primaryText,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarHideOnKeyboard: true,
@@ -62,8 +69,8 @@ export default function TabsLayout() {
         options={{
           title: 'Tủ lạnh',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'snow' : 'snow-outline'}
+            <MaterialCommunityIcons
+              name={focused ? 'fridge' : 'fridge-outline'}
               size={22}
               color={resolveIconColor(color)}
             />

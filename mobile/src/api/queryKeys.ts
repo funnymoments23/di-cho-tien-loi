@@ -24,11 +24,14 @@ export const qk = {
   categories: ['categories'] as const,
   units: ['units'] as const,
 
+  foodsRoot: ['foods'] as const,
   foods: (filter?: FoodFilter) => ['foods', filter ?? null] as const,
   fridge: ['fridge'] as const,
   shopping: ['shopping'] as const,
+  mealsRoot: ['meals'] as const,
   meals: (date: string) => ['meals', date] as const,
   mealSuggestion: ['meals', 'suggestion'] as const,
+  recipesRoot: ['recipes'] as const,
   recipes: (foodId?: string) => ['recipes', foodId ?? null] as const,
   report: (type: ReportType, range?: DateRange) =>
     ['report', type, range ?? null] as const,

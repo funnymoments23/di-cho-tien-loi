@@ -72,7 +72,7 @@ export default function LoginScreen() {
   return (
     <AuthLayout
       title="Đăng nhập"
-      subtitle="Quay lại để tiếp tục quản lý tủ lạnh và danh sách đi chợ của gia đình."
+      centerContent
       footer={
         <View style={styles.footerRow}>
           <Text style={styles.footerText}>Chưa có tài khoản?</Text>

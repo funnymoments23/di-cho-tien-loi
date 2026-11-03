@@ -9,7 +9,14 @@ const { parsePagination, pageResult, applyPagination } = require('../utils/pagin
 const { toPublicRecipe } = require('../utils/serializers');
 
 // Luôn lấy kèm tên / ảnh của món để client hiển thị trực tiếp.
-const RECIPE_POPULATE = [{ path: 'foodId', select: 'name image' }];
+const RECIPE_POPULATE = [
+  { path: 'foodId', select: 'name image' },
+  {
+    path: 'ingredients.foodId',
+    select: 'name image unitId',
+    populate: { path: 'unitId', select: 'name' },
+  },
+];
 
 /** id lấy từ token luôn là ObjectId, vẫn kiểm tra để trả đúng mã thay vì CastError. */
 const assertValidId = (userId) => {
@@ -78,11 +85,49 @@ const getRecipes = async (userId, filters = {}) => {
  * Mọi thành viên trong nhóm đều được quản lý công thức (docs/01 mục 5).
  * Thứ tự kiểm tra: đã vào nhóm (00096) -> thực phẩm tồn tại (00354).
  */
-const createRecipe = async (userId, { foodName, name, description, htmlContent }) => {
+/**
+ * Chuẩn hoá danh sách nguyên liệu: tìm thực phẩm theo tên trong nhóm,
+ * bỏ nguyên liệu trùng tên và trả về mảng { foodId, quantity }.
+ */
+const resolveIngredients = async (groupId, inputs = [], notFoundCode) => {
+  if (!Array.isArray(inputs) || inputs.length === 0) return [];
+
+  const unique = [];
+  const seen = new Set();
+  for (const input of inputs) {
+    const foodName = normalizeText(input?.foodName);
+    if (!foodName || seen.has(foodName)) continue;
+    seen.add(foodName);
+    unique.push({ foodName, quantity: input.quantity });
+  }
+
+  const foods = await Food.find({
+    groupId,
+    name: { $in: unique.map((item) => item.foodName) },
+  }).select('name');
+  const byName = new Map(foods.map((food) => [food.name, food]));
+
+  return unique.map((item) => {
+    const food = byName.get(item.foodName);
+    if (!food) throw fail(notFoundCode);
+    return { foodId: food._id, quantity: item.quantity };
+  });
+};
+
+const createRecipe = async (
+  userId,
+  { foodName, name, description, htmlContent, ingredients }
+) => {
   const { user, group } = await loadGroupContext(userId); // 00096
 
   const food = await Food.findOne({ groupId: group._id, name: normalizeText(foodName) });
   if (!food) throw fail(RC.RECIPE_CREATE_FOOD_NOT_FOUND); // 00354
+
+  const resolvedIngredients = await resolveIngredients(
+    group._id,
+    ingredients,
+    RC.RECIPE_CREATE_FOOD_NOT_FOUND // 00354
+  );
 
   const recipe = await Recipe.create({
     foodId: food._id,
@@ -90,6 +135,7 @@ const createRecipe = async (userId, { foodName, name, description, htmlContent }
     name,
     description,
     htmlContent,
+    ingredients: resolvedIngredients,
     createdBy: user._id,
   });
 
@@ -102,7 +148,14 @@ const createRecipe = async (userId, { foodName, name, description, htmlContent }
  * Công thức của nhóm khác coi như không tồn tại (00365).
  */
 const updateRecipe = async (userId, payload) => {
-  const { recipeId, newFoodName, newName, newDescription, newHtmlContent } = payload;
+  const {
+    recipeId,
+    newFoodName,
+    newName,
+    newDescription,
+    newHtmlContent,
+    newIngredients,
+  } = payload;
 
   const { group } = await loadGroupContext(userId); // 00096
 
@@ -110,7 +163,8 @@ const updateRecipe = async (userId, payload) => {
     newFoodName !== undefined ||
     newName !== undefined ||
     newDescription !== undefined ||
-    newHtmlContent !== undefined;
+    newHtmlContent !== undefined ||
+    newIngredients !== undefined;
   if (!hasUpdate) throw fail(RC.RECIPE_UPDATE_NEED_ONE_FIELD); // 00360
 
   // Từng trường mới được gửi nhưng rỗng: mã riêng của trường đó.
@@ -140,6 +194,14 @@ const updateRecipe = async (userId, payload) => {
   if (newName !== undefined) recipe.name = normalizeText(newName);
   if (newDescription !== undefined) recipe.description = normalizeText(newDescription);
   if (newHtmlContent !== undefined) recipe.htmlContent = newHtmlContent;
+
+  if (newIngredients !== undefined) {
+    recipe.ingredients = await resolveIngredients(
+      group._id,
+      newIngredients,
+      RC.RECIPE_UPDATE_NEW_FOOD_NOT_FOUND // 00367
+    );
+  }
 
   await recipe.save();
   await recipe.populate(RECIPE_POPULATE);

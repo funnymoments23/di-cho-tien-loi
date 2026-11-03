@@ -67,7 +67,6 @@ export default function RegisterScreen() {
   return (
     <AuthLayout
       title="Tạo tài khoản"
-      subtitle="Bắt đầu chia sẻ danh sách đi chợ và tủ lạnh với gia đình."
       onBack={() => router.back()}
       footer={
         <View style={styles.footerRow}>

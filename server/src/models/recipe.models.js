@@ -11,6 +11,12 @@ const recipeSchema = new mongoose.Schema({
   name:        { type: String, required: true, trim: true, maxlength: 200 },
   description: { type: String, required: true, trim: true, maxlength: 2000 },
   htmlContent: { type: String, required: true },
+  // Nguyên liệu của món: một công thức có thể dùng nhiều thực phẩm.
+  ingredients: [{
+    _id: false,
+    foodId:   { type: mongoose.Schema.Types.ObjectId, ref: 'Food', required: true },
+    quantity: { type: Number, required: true, min: 0 },
+  }],
   createdBy:   { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 

@@ -49,8 +49,23 @@ export default function RootLayout() {
     SplashScreen.hideAsync();
     const inAuth = segments[0] === '(auth)';
     const inTabs = segments[0] === '(tabs)';
+    const inGroup = segments[0] === 'group';
+    const inCatalog = segments[0] === 'catalog';
+    const inFood = segments[0] === 'food';
+    const inShoppingDetail = segments[0] === 'shopping';
+    const inRecipes = segments[0] === 'recipes';
     if (!accessToken && !inAuth) router.replace('/(auth)/login');
-    if (accessToken && !inTabs) router.replace('/(tabs)');
+    if (
+      accessToken &&
+      !inTabs &&
+      !inGroup &&
+      !inCatalog &&
+      !inFood &&
+      !inShoppingDetail &&
+      !inRecipes
+    ) {
+      router.replace('/(tabs)');
+    }
   }, [hydrated, accessToken, segments]);
 
   return (

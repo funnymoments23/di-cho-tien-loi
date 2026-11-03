@@ -1,7 +1,6 @@
 import { request } from './client';
 import type {
   FridgeItem,
-  GroupInfo,
   MealPlan,
   RecipeSuggestion,
   ReportOverview,
@@ -20,6 +19,4 @@ export const tabsApi = {
     request<RecipeSuggestion[]>({ url: '/meal/suggestion' }),
 
   reportOverview: () => request<ReportOverview>({ url: '/report/overview' }),
-
-  groupInfo: () => request<GroupInfo>({ url: '/user/group/info' }),
 };

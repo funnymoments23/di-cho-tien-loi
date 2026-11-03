@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ApiError } from '@/api/client';
 import { qk } from '@/api/queryKeys';
 import { tabsApi } from '@/api/tabs.api';
@@ -85,14 +85,24 @@ export default function HomeScreen() {
   return (
     <Screen refreshing={refreshing} onRefresh={refresh}>
       <ScreenHeader
+        boxed
         title={`Xin chào, ${user?.name ?? 'bạn'}`}
         subtitle={formatMealDate(new Date())}
         right={
-          <Thumbnail
-            uri={user?.avatar}
-            label={user?.name ?? '?'}
-            size={44}
-          />
+          <Pressable
+            onPress={() => router.navigate('/(tabs)/profile')}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Mở trang Cá nhân"
+            style={({ pressed }) => pressed && styles.avatarPressed}
+          >
+            <Thumbnail
+              uri={user?.avatar}
+              label={user?.name ?? '?'}
+              size={44}
+              round
+            />
+          </Pressable>
         }
       />
 
@@ -105,8 +115,8 @@ export default function HomeScreen() {
           icon="people-outline"
           action={
             <AppButton
-              title="Mở Cá nhân"
-              onPress={() => router.navigate('/(tabs)/profile')}
+              title="Thiết lập nhóm"
+              onPress={() => router.push('/group/setup')}
               variant="outline"
             />
           }
@@ -127,7 +137,11 @@ export default function HomeScreen() {
             }
           >
             <View style={styles.statsRow}>
-              <StatTile label="Tổng món" value={fridge.totalItems} tone="primary" />
+              <StatTile
+                label="Tổng thực phẩm"
+                value={fridge.totalItems}
+                tone="primary"
+              />
               <StatTile
                 label="Sắp hết hạn"
                 value={fridge.expiringSoon}
@@ -143,7 +157,7 @@ export default function HomeScreen() {
           </SectionCard>
 
           <SectionCard
-            title="Việc cần mua"
+            title="Danh sách mua sắm"
             action={
               <LinkText onPress={() => router.navigate('/(tabs)/shopping')}>
                 Mở danh sách
@@ -200,13 +214,6 @@ export default function HomeScreen() {
               ))
             )}
           </SectionCard>
-
-          <SectionCard title="Mẹo nhỏ">
-            <Text style={styles.tip}>
-              Đặt món sắp hết hạn lên đầu tủ lạnh để dễ thấy. Khi nấu xong, nhớ
-              xoá món khỏi tủ để báo cáo tiêu thụ chính xác.
-            </Text>
-          </SectionCard>
         </>
       )}
     </Screen>
@@ -233,6 +240,9 @@ function MealRow({ label, items }: { label: string; items: MealPlan[] }) {
 }
 
 const styles = StyleSheet.create({
+  avatarPressed: {
+    opacity: 0.75,
+  },
   statsRow: {
     flexDirection: 'row',
     gap: spacing.sm,
@@ -280,10 +290,5 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textMuted,
     fontStyle: 'italic',
-  },
-  tip: {
-    ...typography.body,
-    color: colors.textMuted,
-    lineHeight: 22,
   },
 });

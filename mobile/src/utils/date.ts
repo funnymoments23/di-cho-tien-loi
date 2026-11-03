@@ -10,8 +10,10 @@ export const todayKey = () => dayjs().format(DATE_KEY);
 export const formatDate = (value: string | Date, format = 'DD/MM/YYYY') =>
   dayjs(value).format(format);
 
-export const formatMealDate = (value: string | Date) =>
-  dayjs(value).format('dddd, DD/MM');
+export const formatMealDate = (value: string | Date) => {
+  const text = dayjs(value).format('dddd, DD/MM');
+  return text.charAt(0).toUpperCase() + text.slice(1);
+};
 
 export const daysUntil = (value: string | Date) =>
   dayjs(value).startOf('day').diff(dayjs().startOf('day'), 'day');

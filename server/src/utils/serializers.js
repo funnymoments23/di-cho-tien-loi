@@ -214,6 +214,25 @@ const toPublicRecipe = (recipe) => {
   const food = recipe.foodId;
   const isPopulated = Boolean(food && typeof food === 'object' && food.name !== undefined);
 
+  const ingredients = (recipe.ingredients ?? []).map((ingredient) => {
+    const ingredientFood = ingredient.foodId;
+    const isIngredientPopulated = Boolean(
+      ingredientFood &&
+        typeof ingredientFood === 'object' &&
+        ingredientFood.name !== undefined
+    );
+    const unit = isIngredientPopulated ? ingredientFood.unitId : null;
+
+    return {
+      foodId: isIngredientPopulated ? ingredientFood._id : ingredientFood,
+      foodName: isIngredientPopulated ? ingredientFood.name ?? null : null,
+      image: isIngredientPopulated ? ingredientFood.image ?? null : null,
+      unitId: unit?._id ?? null,
+      unitName: unit?.name ?? null,
+      quantity: ingredient.quantity,
+    };
+  });
+
   return {
     id: recipe._id,
     groupId: recipe.groupId,
@@ -223,6 +242,7 @@ const toPublicRecipe = (recipe) => {
     name: recipe.name,
     description: recipe.description,
     htmlContent: recipe.htmlContent,
+    ingredients,
     createdBy: recipe.createdBy ?? null,
     createdAt: recipe.createdAt,
     updatedAt: recipe.updatedAt,

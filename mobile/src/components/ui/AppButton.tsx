@@ -27,7 +27,7 @@ export function AppButton({
 }: AppButtonProps) {
   const isDisabled = disabled || loading;
   const isPrimary = variant === 'primary';
-  const contentColor = isPrimary ? colors.onPrimary : colors.primaryText;
+  const contentColor = isPrimary ? colors.onAccent : colors.accentText;
 
   return (
     <Pressable
@@ -71,12 +71,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   primary: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.accent,
   },
   outline: {
     backgroundColor: 'transparent',
     borderWidth: 1.5,
-    borderColor: colors.primaryText,
+    borderColor: colors.accent,
   },
   ghost: {
     minHeight: 40,

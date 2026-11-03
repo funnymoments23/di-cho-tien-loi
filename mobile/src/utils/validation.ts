@@ -1,7 +1,11 @@
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** Bỏ toàn bộ khoảng trắng và chuẩn hoá chữ thường cho email. */
+export const normalizeEmail = (value: string) =>
+  value.replace(/\s/g, '').toLowerCase();
+
 export const isValidEmail = (value: string) =>
-  EMAIL_PATTERN.test(value.trim().toLowerCase());
+  EMAIL_PATTERN.test(normalizeEmail(value));
 
 export const isValidName = (value: string) => {
   const name = value.trim();

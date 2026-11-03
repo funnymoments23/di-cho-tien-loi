@@ -7,6 +7,11 @@ const objectIdSchema = Joi.string()
 const recipeNameSchema = Joi.string().trim().min(1).max(200);
 const descriptionSchema = Joi.string().trim().min(1).max(2000);
 const htmlContentSchema = Joi.string().min(1).max(200_000);
+const ingredientSchema = Joi.object({
+  foodName: foodNameSchema.required(),
+  quantity: Joi.number().positive().max(1_000_000).required(),
+});
+const ingredientsSchema = Joi.array().items(ingredientSchema).max(50);
 
 /** POST /recipe — thêm công thức cho một món ăn của nhóm. */
 const createRecipeSchema = Joi.object({
@@ -14,6 +19,9 @@ const createRecipeSchema = Joi.object({
   name: recipeNameSchema.required(),
   description: descriptionSchema.required(),
   htmlContent: htmlContentSchema.required(),
+  // Một công thức có thể dùng nhiều nguyên liệu; không bắt buộc để tương thích
+  // với dữ liệu cũ và các client chỉ gửi món ăn chính.
+  ingredients: ingredientsSchema,
 });
 
 /**
@@ -27,6 +35,7 @@ const updateRecipeSchema = Joi.object({
   newName: recipeNameSchema.allow('', null),
   newDescription: descriptionSchema.allow('', null),
   newHtmlContent: htmlContentSchema.allow('', null),
+  newIngredients: ingredientsSchema,
 });
 
 /** DELETE /recipe — xoá công thức theo recipeId (đặc tả dùng body). */

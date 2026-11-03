@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { AppButton } from './AppButton';
 import { colors, spacing, typography } from '@/theme';
@@ -16,6 +17,7 @@ type EmptyStateProps = {
   title: string;
   message?: string;
   icon?: keyof typeof Ionicons.glyphMap;
+  materialIcon?: keyof typeof MaterialCommunityIcons.glyphMap;
   action?: React.ReactNode;
 };
 
@@ -23,12 +25,21 @@ export function EmptyState({
   title,
   message,
   icon = 'leaf-outline',
+  materialIcon,
   action,
 }: EmptyStateProps) {
   return (
     <View style={styles.container}>
       <View style={styles.iconCircle}>
-        <Ionicons name={icon} size={26} color={colors.primaryText} />
+        {materialIcon ? (
+          <MaterialCommunityIcons
+            name={materialIcon}
+            size={26}
+            color={colors.primaryText}
+          />
+        ) : (
+          <Ionicons name={icon} size={26} color={colors.primaryText} />
+        )}
       </View>
       <Text style={styles.title}>{title}</Text>
       {message ? <Text style={styles.message}>{message}</Text> : null}

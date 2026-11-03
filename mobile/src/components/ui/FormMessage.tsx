@@ -1,9 +1,11 @@
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, radius, spacing, typography } from '@/theme';
 
 type FormMessageProps = {
   type?: 'error' | 'success' | 'info';
   message: string;
+  autoHideMs?: number;
 };
 
 const tones = {
@@ -12,7 +14,25 @@ const tones = {
   info: { background: colors.infoSoft, foreground: colors.info },
 } as const;
 
-export function FormMessage({ type = 'info', message }: FormMessageProps) {
+export function FormMessage({
+  type = 'info',
+  message,
+  autoHideMs = 5000,
+}: FormMessageProps) {
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    setVisible(true);
+
+    // Chỉ thông báo thành công tự ẩn; lỗi/info cần người dùng đọc và xử lý.
+    if (type !== 'success') return;
+
+    const timer = setTimeout(() => setVisible(false), autoHideMs);
+    return () => clearTimeout(timer);
+  }, [message, type, autoHideMs]);
+
+  if (!visible) return null;
+
   const tone = tones[type];
 
   return (

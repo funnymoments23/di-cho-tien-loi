@@ -79,18 +79,19 @@ const styles = StyleSheet.create({
   },
   label: {
     ...typography.label,
+    fontSize: 13,
     color: colors.textMuted,
     marginBottom: spacing.sm,
   },
   container: {
-    minHeight: 52,
+    minHeight: 58,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
   containerFocused: {
     borderColor: colors.primaryText,
@@ -100,13 +101,14 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 16,
     paddingHorizontal: 0,
     color: colors.text,
-    fontSize: 16,
+    fontSize: 17,
   },
   toggle: {
     ...typography.label,
+    fontSize: 13,
     color: colors.primaryText,
     paddingLeft: spacing.sm,
   },

@@ -448,3 +448,54 @@ describe(`DELETE ${RECIPE} — xoá công thức`, () => {
     expect(await Recipe.countDocuments({})).toBe(0);
   });
 });
+// =====================================================================
+describe('Nguyên liệu công thức', () => {
+  it('lưu nhiều nguyên liệu khi tạo công thức', async () => {
+    const res = await createRecipeRequest(ctx.member.token, {
+      ingredients: [
+        { foodName: 'Thịt bò', quantity: 0.5 },
+        { foodName: 'Cà rốt', quantity: 100 },
+      ],
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body.data.ingredients).toHaveLength(2);
+    expect(res.body.data.ingredients[0]).toMatchObject({
+      foodName: 'Thịt bò',
+      unitName: 'kg',
+      quantity: 0.5,
+    });
+    expect(res.body.data.ingredients[1]).toMatchObject({
+      foodName: 'Cà rốt',
+      unitName: 'gram',
+      quantity: 100,
+    });
+  });
+
+  it('cập nhật danh sách nguyên liệu', async () => {
+    const recipe = await createBeefRecipe(ctx.member.token, {
+      ingredients: [{ foodName: 'Thịt bò', quantity: 1 }],
+    });
+
+    const res = await updateRecipeRequest(ctx.member.token, {
+      recipeId: recipe.id,
+      newIngredients: [{ foodName: 'Cà rốt', quantity: 2 }],
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.ingredients).toHaveLength(1);
+    expect(res.body.data.ingredients[0]).toMatchObject({
+      foodName: 'Cà rốt',
+      quantity: 2,
+    });
+  });
+
+  it('00354 khi nguyên liệu không tồn tại', async () => {
+    const res = await createRecipeRequest(ctx.member.token, {
+      ingredients: [{ foodName: 'Không tồn tại', quantity: 1 }],
+    });
+
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe(RC.RECIPE_CREATE_FOOD_NOT_FOUND.code);
+  });
+});

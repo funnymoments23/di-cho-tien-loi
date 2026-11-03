@@ -248,6 +248,11 @@ const deleteFood = async (userId, { foodName, foodId } = {}) => {
   await Task.deleteMany({ foodId: food._id });
   await MealPlan.deleteMany({ foodId: food._id });
   await Recipe.deleteMany({ foodId: food._id });
+  // Công thức khác có thể dùng thực phẩm này như một nguyên liệu.
+  await Recipe.updateMany(
+    { 'ingredients.foodId': food._id },
+    { $pull: { ingredients: { foodId: food._id } } }
+  );
   if (food.imagePublicId) await deleteAsset(food.imagePublicId);
   return data;
 };

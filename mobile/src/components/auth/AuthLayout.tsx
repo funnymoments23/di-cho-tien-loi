@@ -10,14 +10,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, spacing, typography } from '@/theme';
 
 type AuthLayoutProps = {
   title: string;
-  subtitle: string;
+  subtitle?: string;
   children: ReactNode;
   footer?: ReactNode;
   onBack?: () => void;
+  centerContent?: boolean;
 };
 
 export function AuthLayout({
@@ -26,6 +27,7 @@ export function AuthLayout({
   children,
   footer,
   onBack,
+  centerContent = false,
 }: AuthLayoutProps) {
   const handleBack = () => {
     if (onBack) onBack();
@@ -54,20 +56,17 @@ export function AuthLayout({
             <View style={styles.backSpacer} />
           )}
 
-          <View style={styles.brandRow}>
-            <View style={[styles.dot, { backgroundColor: colors.primary }]} />
-            <View style={[styles.dot, { backgroundColor: colors.secondary }]} />
-            <View style={[styles.dot, { backgroundColor: colors.highlight }]} />
-            <View style={[styles.dot, { backgroundColor: colors.accent }]} />
+          <View style={centerContent ? styles.centeredBody : undefined}>
+            <Text style={styles.brand}>ĐI CHỢ TIỆN LỢI</Text>
+            <Text style={[styles.title, !subtitle && styles.titleNoSubtitle]}>
+              {title}
+            </Text>
+            {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+
+            <View style={styles.form}>{children}</View>
+
+            {footer ? <View style={styles.footer}>{footer}</View> : null}
           </View>
-
-          <Text style={styles.brand}>ĐI CHỢ TIỆN LỢI</Text>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.subtitle}>{subtitle}</Text>
-
-          <View style={styles.card}>{children}</View>
-
-          {footer ? <View style={styles.footer}>{footer}</View> : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -124,26 +123,19 @@ const styles = StyleSheet.create({
   backSpacer: {
     height: 32,
   },
-  brandRow: {
-    flexDirection: 'row',
-    gap: 6,
-    marginTop: spacing.lg,
-  },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
   brand: {
     ...typography.label,
     color: colors.primaryText,
     letterSpacing: 1.6,
-    marginTop: spacing.md,
+    marginTop: spacing.lg,
   },
   title: {
     ...typography.display,
     color: colors.text,
     marginTop: spacing.sm,
+  },
+  titleNoSubtitle: {
+    marginBottom: spacing.xl,
   },
   subtitle: {
     ...typography.body,
@@ -151,12 +143,13 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     marginBottom: spacing.xl,
   },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.xl,
+  centeredBody: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    width: '100%',
+  },
+  form: {
+    width: '100%',
   },
   footer: {
     marginTop: spacing.xl,

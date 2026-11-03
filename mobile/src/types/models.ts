@@ -1,3 +1,50 @@
+import type { User } from './api';
+
+export type LookupItem = {
+  id: string;
+  name: string;
+};
+
+export type GroupSummary = {
+  id: string;
+  name: string;
+  adminId: string;
+  memberCount: number;
+  createdAt: string;
+};
+
+export type GroupDetail = GroupSummary & {
+  members: User[];
+};
+
+export type GroupInfo = {
+  id: string;
+  name: string;
+  adminId: string;
+  memberCount: number;
+  createdAt: string;
+  isAdmin: boolean;
+  admin: {
+    id: string;
+    name: string;
+    username: string | null;
+  } | null;
+};
+
+export type Food = {
+  id: string;
+  name: string;
+  image: string | null;
+  categoryId: string | null;
+  categoryName: string | null;
+  unitId: string | null;
+  unitName: string | null;
+  groupId: string;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type FridgeItem = {
   id: string;
   foodId: string | null;
@@ -67,6 +114,30 @@ export type MealPlan = {
   updatedAt: string;
 };
 
+export type RecipeIngredient = {
+  foodId: string | null;
+  foodName: string | null;
+  image: string | null;
+  unitId: string | null;
+  unitName: string | null;
+  quantity: number;
+};
+
+export type Recipe = {
+  id: string;
+  groupId: string;
+  foodId: string | null;
+  foodName: string | null;
+  image: string | null;
+  name: string;
+  description: string;
+  htmlContent: string;
+  ingredients: RecipeIngredient[];
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type RecipeSuggestion = {
   id: string;
   groupId: string;
@@ -76,25 +147,12 @@ export type RecipeSuggestion = {
   name: string;
   description: string;
   htmlContent: string;
+  ingredients: RecipeIngredient[];
   quantity: number;
   expiryDate: string;
   daysUntilExpiry: number;
   location: string | null;
   note: string | null;
-};
-
-export type GroupInfo = {
-  id: string;
-  name: string;
-  adminId: string;
-  memberCount: number;
-  createdAt: string;
-  isAdmin: boolean;
-  admin: {
-    id: string;
-    name: string;
-    username: string | null;
-  } | null;
 };
 
 export type ReportOverview = {

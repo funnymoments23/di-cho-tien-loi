@@ -6,16 +6,23 @@ type ThumbnailProps = {
   uri?: string | null;
   label: string;
   size?: number;
+  round?: boolean;
 };
 
-export function Thumbnail({ uri, label, size = 48 }: ThumbnailProps) {
+export function Thumbnail({
+  uri,
+  label,
+  size = 48,
+  round = false,
+}: ThumbnailProps) {
   const initial = label.trim().charAt(0).toUpperCase() || '?';
+  const borderRadius = round ? size / 2 : radius.md;
 
   if (uri) {
     return (
       <Image
         source={{ uri }}
-        style={{ width: size, height: size, borderRadius: radius.md }}
+        style={{ width: size, height: size, borderRadius }}
         contentFit="cover"
         transition={150}
       />
@@ -26,7 +33,7 @@ export function Thumbnail({ uri, label, size = 48 }: ThumbnailProps) {
     <View
       style={[
         styles.fallback,
-        { width: size, height: size, borderRadius: radius.md },
+        { width: size, height: size, borderRadius },
       ]}
     >
       <Text style={[styles.initial, { fontSize: size * 0.38 }]}>{initial}</Text>

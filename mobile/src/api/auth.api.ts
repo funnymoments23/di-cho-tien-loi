@@ -34,6 +34,15 @@ export type ForgotPasswordData = {
 };
 
 export const authApi = {
+  me: () => request<User>({ url: '/user' }),
+
+  updateAvatar: (form: FormData) =>
+    request<User>({
+      method: 'PUT',
+      url: '/user',
+      data: form,
+    }),
+
   login: (email: string, password: string) =>
     request<AuthData>({
       method: 'POST',

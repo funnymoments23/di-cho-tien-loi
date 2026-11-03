@@ -12,6 +12,7 @@ import {
   isSixDigitCode,
   isValidEmail,
   isValidPassword,
+  normalizeEmail,
 } from '@/utils/validation';
 
 export default function ForgotPasswordScreen() {
@@ -33,7 +34,7 @@ export default function ForgotPasswordScreen() {
     return () => clearTimeout(timer);
   }, [cooldown]);
 
-  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedEmail = normalizeEmail(email);
 
   const sendCode = async () => {
     setError('');
@@ -109,11 +110,7 @@ export default function ForgotPasswordScreen() {
   return (
     <AuthLayout
       title="Quên mật khẩu"
-      subtitle={
-        step === 1
-          ? 'Nhập email đã đăng ký để nhận mã đặt lại mật khẩu.'
-          : 'Nhập mã 6 chữ số và mật khẩu mới cho tài khoản của bạn.'
-      }
+      centerContent
       onBack={handleBack}
       footer={
         <View style={styles.footerRow}>
@@ -132,7 +129,7 @@ export default function ForgotPasswordScreen() {
           <AppInput
             label="Email"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(value) => setEmail(normalizeEmail(value))}
             placeholder="ban@example.com"
             keyboardType="email-address"
             autoCapitalize="none"
