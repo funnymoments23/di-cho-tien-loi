@@ -9,6 +9,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as SplashScreen from 'expo-splash-screen';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuthStore } from '../store/authStore';
 import { colors } from '@/theme';
 
@@ -47,16 +48,19 @@ export default function RootLayout() {
     if (!hydrated) return;
     SplashScreen.hideAsync();
     const inAuth = segments[0] === '(auth)';
+    const inTabs = segments[0] === '(tabs)';
     if (!accessToken && !inAuth) router.replace('/(auth)/login');
-    if (accessToken && inAuth) router.replace('/(tabs)');
+    if (accessToken && !inTabs) router.replace('/(tabs)');
   }, [hydrated, accessToken, segments]);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider value={navigationTheme}>
-        <StatusBar style="dark" />
-        <Stack screenOptions={{ headerShown: false }} />
-      </ThemeProvider>
-    </QueryClientProvider>
+    <SafeAreaProvider>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider value={navigationTheme}>
+          <StatusBar style="dark" />
+          <Stack screenOptions={{ headerShown: false }} />
+        </ThemeProvider>
+      </QueryClientProvider>
+    </SafeAreaProvider>
   );
 }

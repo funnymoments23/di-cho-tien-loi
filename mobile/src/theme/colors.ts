@@ -24,7 +24,7 @@ export const palette = {
   blue: '#73A5CA',
 
   // Tông đậm hơn để dùng cho chữ/trạng thái nhấn
-  orangeDeep: '#B34E00',
+  orangeDeep: '#9A3F00',
   orangePressed: '#E97A22',
   yellowDeep: '#8A5A00',
   yellowPressed: '#F0B83C',

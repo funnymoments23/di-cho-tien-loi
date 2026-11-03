@@ -20,6 +20,7 @@ export type ReportType =
 export const qk = {
   me: ['me'] as const,
   group: ['group'] as const,
+  groupInfo: ['group', 'info'] as const,
   categories: ['categories'] as const,
   units: ['units'] as const,
 
