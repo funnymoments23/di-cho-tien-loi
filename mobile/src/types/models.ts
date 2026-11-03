@@ -136,16 +136,25 @@ export type Recipe = {
   updatedAt: string;
 };
 
-export type RecipeSuggestion = {
-  id: string;
-  groupId: string;
+export type RecipeSuggestionIngredient = {
   foodId: string | null;
   foodName: string | null;
-  image: string | null;
-  name: string;
-  description: string;
-  htmlContent: string;
-  ingredients: RecipeIngredient[];
+  quantity: number;
+  unitName: string | null;
+  fridgeQuantity: number;
+  expiryDate: string;
+  daysUntilExpiry: number;
+  location: string | null;
+  note: string | null;
+};
+
+export type RecipeSuggestion = Omit<Recipe, 'ingredients'> & {
+  reason: string;
+  matchedCount: number;
+  totalIngredients: number;
+  matchedIngredients: RecipeSuggestionIngredient[];
+  missingIngredients: { foodId: string | null; foodName: string | null }[];
+  // Trường tương thích của gợi ý cũ: lấy theo nguyên liệu khớp gần hết hạn nhất.
   quantity: number;
   expiryDate: string;
   daysUntilExpiry: number;

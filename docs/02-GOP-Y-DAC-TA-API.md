@@ -190,6 +190,8 @@ Authorization: Bearer Token
 
 **Thuật toán:** lấy danh sách `foodId` đang có trong tủ lạnh của nhóm → tìm các `recipe` có `foodId` nằm trong danh sách đó → xếp hạng theo số nguyên liệu khớp và theo độ gần hạn sử dụng (ưu tiên món dùng được nguyên liệu sắp hết hạn, đúng tinh thần "tối ưu hoá việc tiêu thụ thực phẩm trước khi hết hạn" ở mục A của đề).
 
+> **Trạng thái triển khai:** `GET /meal/suggestion` đối chiếu `ingredients[]` của từng công thức với thực phẩm còn hạn trong tủ (gộp theo thực phẩm, lấy hạn gần nhất và cộng số lượng). Công thức cũ chỉ có `foodId` được coi là một nguyên liệu. Kết quả xếp theo số nguyên liệu khớp giảm dần, rồi hạn sử dụng gần nhất; mỗi gợi ý trả kèm `reason` (ví dụ "Dùng Cà rốt còn 2 ngày"), `matchedIngredients`, `missingIngredients`, `matchedCount`, `totalIngredients`. Công thức không khớp nguyên liệu nào và mục đã hết hạn bị loại khỏi gợi ý.
+
 ### 3.3 Thống kê báo cáo — *đề mục B.6*
 
 > "Hệ thống cung cấp các báo cáo về những món đồ đã mua, những thực phẩm đã tiêu thụ trong một khoảng thời gian nhất định."

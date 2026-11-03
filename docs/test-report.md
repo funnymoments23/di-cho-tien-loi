@@ -790,7 +790,7 @@ Ghi chú nhóm Đi chợ:
 | 362 | Thành viên (không phải trưởng nhóm) xoá | 403 / `00327` | PASS |
 | 363 | Trưởng nhóm xoá | 200 / `00330`; trả lại dữ liệu vừa xoá | PASS |
 
-#### `GET /it4788/meal/suggestion` — gợi ý món từ tủ lạnh (4/4)
+#### `GET /it4788/meal/suggestion` — gợi ý công thức từ tủ lạnh (6/6)
 
 | # | Case | Kỳ vọng | Kết quả |
 |---|---|---|---|
@@ -798,6 +798,8 @@ Ghi chú nhóm Đi chợ:
 | 365 | Tủ lạnh trống | 200 / `00348`; mảng rỗng | PASS |
 | 366 | Ưu tiên thực phẩm sắp hết hạn, bỏ qua mục đã hết hạn | 200 / `00348`; cà rốt (còn 1 ngày) đứng trước thịt bò (còn 5 ngày) | PASS |
 | 367 | `?limit=1` | 200 / `00348`; đúng 1 gợi ý | PASS |
+| 367a | Công thức nhiều nguyên liệu: xếp theo số nguyên liệu khớp rồi hạn gần nhất | 200 / `00348`; món khớp 2/2 đứng trước món khớp 1/1; `reason` nêu nguyên liệu còn 2 ngày | PASS |
+| 367b | Bỏ công thức không khớp nguyên liệu nào, báo nguyên liệu còn thiếu | 200 / `00348`; chỉ trả món khớp 1/2 kèm `missingIngredients` | PASS |
 
 #### Dọn dữ liệu liên quan (1/1)
 
@@ -810,10 +812,10 @@ Ghi chú nhóm Bữa ăn:
 - Quyền: **chỉ trưởng nhóm** được lập / sửa / xoá kế hoạch bữa ăn (mã `00319`, `00339`, `00327`); mọi thành viên được xem lịch và gợi ý món.
 - Tên bữa nhận cả có dấu và không dấu (`Sang`, `sang`, `sáng`) rồi chuẩn hoá về `sáng` / `trưa` / `tối` trước khi lưu, tránh lỗi gõ từ client.
 - `GET /meal` hỗ trợ `?date=YYYY-MM-DD` cho màn hình một ngày và `?from=&to=` cho màn hình tuần; tham số ngày sai định dạng bị bỏ qua thay vì làm hỏng cả danh sách.
-- `GET /meal/suggestion` (API bổ sung, [tài liệu 02](02-GOP-Y-DAC-TA-API.md) mục 3.2) lấy các mục còn hạn trong tủ, tìm công thức gắn với thực phẩm đó và sắp xếp theo hạn sử dụng gần nhất. Mục đã hết hạn bị loại khỏi gợi ý để không đề xuất thực phẩm không còn dùng được.
-- Mỗi công thức chỉ gắn một `foodId` nên chưa xếp hạng được theo số nguyên liệu khớp; hướng mở rộng là thêm `ingredients[]` vào `recipes` (docs/01 mục 6.3).
+- `GET /meal/suggestion` (API bổ sung, [tài liệu 02](02-GOP-Y-DAC-TA-API.md) mục 3.2) gộp thực phẩm còn hạn trong tủ theo hạn gần nhất, đối chiếu với `ingredients[]` của từng công thức rồi xếp theo số nguyên liệu khớp và hạn sử dụng. Mỗi gợi ý trả `reason`, `matchedIngredients`, `missingIngredients`, `matchedCount`, `totalIngredients`; mục đã hết hạn và công thức không khớp nguyên liệu nào bị loại.
+- Công thức cũ chỉ có `foodId` (chưa có `ingredients[]`) vẫn được coi là một nguyên liệu để không bỏ sót gợi ý.
 
-### Nhóm API Công thức (`tests/recipe.test.js`) — 31/31
+### Nhóm API Công thức (`tests/recipe.test.js`) — 34/34
 
 #### `POST /it4788/recipe` — thêm công thức (10/10)
 
@@ -871,6 +873,8 @@ Ghi chú nhóm Công thức:
 - Quyền: mọi thành viên trong nhóm được thêm / sửa / xoá công thức (docs/01 mục 5); công thức của nhóm khác coi như không tồn tại (`00365`, `00373`).
 - Đặc tả gốc dùng `?foodId=` cho `GET /recipe`; nhóm hỗ trợ thêm `?foodName=` cho đồng nhất với các API thực phẩm khác ([tài liệu 02](02-GOP-Y-DAC-TA-API.md) mục 2.5). Không truyền tham số thì trả toàn bộ công thức của nhóm.
 - `htmlContent` được trả đầy đủ trong danh sách để màn hình chi tiết render trực tiếp bằng `react-native-render-html`.
+- Công thức hỗ trợ nhiều nguyên liệu qua `ingredients[]` (`{ foodName, quantity }` khi ghi, trả kèm `foodId`, `foodName`, `unitId`, `unitName`, `quantity`); `foodName` của món ăn chính không bắt buộc nên công thức có thể chỉ gồm nguyên liệu. Ba test bổ sung: lưu nhiều nguyên liệu, cập nhật danh sách nguyên liệu, `00354` khi nguyên liệu không tồn tại trong nhóm.
+- Response công thức không trả `image`; ảnh chỉ thuộc về thực phẩm.
 
 ### Thông báo đẩy & cron (`tests/push-notification.test.js`, `tests/expiry-checker.test.js`) — 19/19
 

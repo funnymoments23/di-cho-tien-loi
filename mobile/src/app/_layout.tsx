@@ -8,6 +8,13 @@ import {
 } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useFonts } from 'expo-font';
+// Import từng weight để Metro chỉ đóng gói 4 file font cần dùng,
+// thay vì cả 18 weight khi import từ entry chính của package.
+import { BeVietnamPro_400Regular } from '@expo-google-fonts/be-vietnam-pro/400Regular';
+import { BeVietnamPro_500Medium } from '@expo-google-fonts/be-vietnam-pro/500Medium';
+import { BeVietnamPro_600SemiBold } from '@expo-google-fonts/be-vietnam-pro/600SemiBold';
+import { BeVietnamPro_700Bold } from '@expo-google-fonts/be-vietnam-pro/700Bold';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuthStore } from '../store/authStore';
@@ -39,14 +46,23 @@ export default function RootLayout() {
   const { hydrated, accessToken, hydrate } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
+  const [fontsLoaded, fontError] = useFonts({
+    BeVietnamPro_400Regular,
+    BeVietnamPro_500Medium,
+    BeVietnamPro_600SemiBold,
+    BeVietnamPro_700Bold,
+  });
 
   useEffect(() => {
     hydrate();
   }, []);
 
   useEffect(() => {
+    if (hydrated && (fontsLoaded || fontError)) SplashScreen.hideAsync();
+  }, [hydrated, fontsLoaded, fontError]);
+
+  useEffect(() => {
     if (!hydrated) return;
-    SplashScreen.hideAsync();
     const inAuth = segments[0] === '(auth)';
     const inTabs = segments[0] === '(tabs)';
     const inGroup = segments[0] === 'group';

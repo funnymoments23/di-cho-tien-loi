@@ -2,7 +2,7 @@ import { useState } from 'react';
 import dayjs, { type Dayjs } from 'dayjs';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, fonts, radius, spacing, typography } from '@/theme';
 import { formatDate } from '@/utils/date';
 
 const WEEKDAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   },
   dayTextSelected: {
     color: colors.onAccent,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
   },
   footer: {
     flexDirection: 'row',

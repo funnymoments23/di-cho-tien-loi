@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
@@ -144,13 +144,16 @@ export default function RecipesScreen() {
     );
   };
 
-  useEffect(() => {
-    if (!editId || autoOpened || recipesQuery.isLoading) return;
-    const recipe = recipes.find((item) => item.id === editId);
-    if (!recipe) return;
+  // Tự mở form sửa khi được điều hướng tới với ?editId=... nhưng chỉ một lần
+  // và khi danh sách công thức đã tải xong.
+  const autoEditRecipe =
+    editId && !autoOpened && !recipesQuery.isLoading
+      ? recipes.find((item) => item.id === editId)
+      : undefined;
+  if (autoEditRecipe) {
     setAutoOpened(true);
-    openEdit(recipe);
-  }, [editId, autoOpened, recipesQuery.isLoading, recipes]);
+    openEdit(autoEditRecipe);
+  }
 
   const closeEditor = () => {
     if (saving) return;

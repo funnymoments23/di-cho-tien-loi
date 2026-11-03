@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -122,16 +122,17 @@ export default function ShoppingDetailScreen() {
     setEditorOpen(false);
   };
 
-  useEffect(() => {
-    if (!shouldOpenAdd || autoOpened || !list || !isAdmin) return;
-
+  // Mở form thêm món khi được điều hướng tới với ?openAdd=1.
+  // Điều chỉnh state ngay trong render (React khuyến nghị cho trường hợp
+  // state phụ thuộc prop) thay vì setState trong useEffect.
+  if (shouldOpenAdd && !autoOpened && list && isAdmin) {
     setAutoOpened(true);
     setEditingTask(null);
     setFoodName('');
     setQuantity('1');
     setEditorError('');
     setEditorOpen(true);
-  }, [shouldOpenAdd, autoOpened, list, isAdmin]);
+  }
 
   const saveTask = async () => {
     setEditorError('');

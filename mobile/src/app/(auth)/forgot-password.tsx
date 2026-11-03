@@ -6,7 +6,7 @@ import { AuthLayout } from '@/components/auth/AuthLayout';
 import { AppButton } from '@/components/ui/AppButton';
 import { AppInput } from '@/components/ui/AppInput';
 import { FormMessage } from '@/components/ui/FormMessage';
-import { colors, spacing, typography } from '@/theme';
+import { colors, fonts, spacing, typography } from '@/theme';
 import { getErrorMessage } from '@/utils/error';
 import {
   isSixDigitCode,
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 24,
     letterSpacing: 8,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
     paddingVertical: 10,
   },
   secondaryButton: {

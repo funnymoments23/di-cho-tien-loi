@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, radius } from '@/theme';
+import { colors, fonts, radius } from '@/theme';
 
 type ThumbnailProps = {
   uri?: string | null;
@@ -49,6 +49,6 @@ const styles = StyleSheet.create({
   },
   initial: {
     color: colors.primaryText,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
   },
 });

@@ -34,7 +34,7 @@ import { Thumbnail } from '@/components/ui/Thumbnail';
 import { useAuthStore } from '@/store/authStore';
 import { colors, radius, spacing, typography } from '@/theme';
 import { getErrorMessage } from '@/utils/error';
-import type { Food, LookupItem } from '@/types/models';
+import type { Food } from '@/types/models';
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -321,9 +321,6 @@ export default function FoodScreen() {
           title="Kho thực phẩm"
           subtitle={`${foods.length} thực phẩm trong nhóm`}
           onBack={() => router.back()}
-          right={
-            !noGroup ? <LinkText onPress={openCreate}>Thêm</LinkText> : null
-          }
         />
 
         {notice ? <FormMessage type="success" message={notice} /> : null}
@@ -407,6 +404,17 @@ export default function FoodScreen() {
             ))}
           </SectionCard>
         )}
+
+        {!noGroup &&
+        !foodsQuery.isLoading &&
+        !foodsQuery.isError &&
+        foods.length > 0 ? (
+          <AppButton
+            title="Thêm thực phẩm"
+            onPress={openCreate}
+            style={styles.addFoodButton}
+          />
+        ) : null}
       </Screen>
 
       <Modal
@@ -573,6 +581,9 @@ function FilterChip({
 }
 
 const styles = StyleSheet.create({
+  addFoodButton: {
+    marginTop: spacing.lg,
+  },
   chipRow: {
     gap: spacing.sm,
     paddingBottom: spacing.lg,

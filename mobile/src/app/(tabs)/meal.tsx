@@ -18,7 +18,6 @@ import { ErrorState, LoadingState } from '@/components/ui/StateView';
 import { Thumbnail } from '@/components/ui/Thumbnail';
 import { colors, radius, spacing, typography } from '@/theme';
 import {
-  expiryLabel,
   formatDate,
   formatMealDate,
   getNextDays,
@@ -57,6 +56,7 @@ export default function MealScreen() {
   const [mealDate, setMealDate] = useState(new Date());
   const [editorError, setEditorError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [suggestOpen, setSuggestOpen] = useState(false);
 
   const mealsQuery = useQuery({
     queryKey: qk.meals(selectedDate),
@@ -118,6 +118,26 @@ export default function MealScreen() {
   const closeEditor = () => {
     if (saving) return;
     setEditorOpen(false);
+  };
+
+  const openSuggestions = () => {
+    setSuggestOpen(true);
+    void suggestionsQuery.refetch();
+  };
+
+  const addSuggestionToMeal = (suggestion: RecipeSuggestion) => {
+    const foodName =
+      suggestion.matchedIngredients[0]?.foodName ??
+      suggestion.foodName ??
+      '';
+
+    if (!foodName) {
+      setError('Không tìm thấy nguyên liệu phù hợp để thêm vào bữa ăn.');
+      return;
+    }
+
+    setSuggestOpen(false);
+    openCreate('trưa', foodName);
   };
 
   const save = async () => {
@@ -268,6 +288,17 @@ export default function MealScreen() {
           })}
         </View>
 
+        <AppButton
+          title={
+            suggestions.length > 0
+              ? `Gợi ý món từ tủ lạnh (${suggestions.length})`
+              : 'Gợi ý món từ tủ lạnh'
+          }
+          onPress={openSuggestions}
+          variant="outline"
+          style={styles.suggestionButton}
+        />
+
         {mealsQuery.isLoading ? (
           <LoadingState message="Đang tải lịch bữa ăn..." />
         ) : mealsQuery.isError ? (
@@ -296,27 +327,6 @@ export default function MealScreen() {
                 />
               </SectionCard>
             ))}
-
-            {suggestions.length > 0 ? (
-              <SectionCard title="Gợi ý từ tủ lạnh">
-                <Text style={styles.suggestionHint}>
-                  Ưu tiên nguyên liệu sắp hết hạn để giảm lãng phí.
-                </Text>
-                {suggestions.slice(0, 5).map((suggestion) => (
-                  <SuggestionRow
-                    key={suggestion.id}
-                    suggestion={suggestion}
-                    isAdmin={isAdmin}
-                    onAdd={() =>
-                      openCreate(
-                        'trưa',
-                        suggestion.foodName ?? ''
-                      )
-                    }
-                  />
-                ))}
-              </SectionCard>
-            ) : null}
 
             <SectionCard title="Công thức nấu ăn">
               <Text style={styles.suggestionHint}>
@@ -406,6 +416,88 @@ export default function MealScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <Modal
+        visible={suggestOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSuggestOpen(false)}
+      >
+        <View style={styles.sheetOverlay}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setSuggestOpen(false)}
+          />
+          <View style={styles.sheet}>
+            <View style={styles.sheetHandle} />
+
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Gợi ý món từ tủ lạnh</Text>
+              <LinkText onPress={() => setSuggestOpen(false)}>Đóng</LinkText>
+            </View>
+            <Text style={styles.suggestionHint}>
+              Ưu tiên nguyên liệu sắp hết hạn để giảm lãng phí.
+            </Text>
+
+            {suggestionsQuery.isLoading ? (
+              <LoadingState message="Đang tìm món phù hợp..." />
+            ) : suggestionsQuery.isError ? (
+              <ErrorState
+                message={getErrorMessage(suggestionsQuery.error)}
+                onRetry={() => void suggestionsQuery.refetch()}
+              />
+            ) : suggestions.length === 0 ? (
+              <View style={styles.suggestionEmpty}>
+                <Text style={styles.suggestionEmptyTitle}>
+                  Chưa có gợi ý nào
+                </Text>
+                <Text style={styles.suggestionEmptyText}>
+                  Thêm thực phẩm còn hạn vào tủ lạnh và tạo công thức có nguyên
+                  liệu tương ứng, sau đó mở lại gợi ý.
+                </Text>
+                <AppButton
+                  title="Mở tủ lạnh"
+                  variant="outline"
+                  onPress={() => {
+                    setSuggestOpen(false);
+                    router.navigate('/(tabs)/fridge');
+                  }}
+                />
+                <AppButton
+                  title="Xem công thức"
+                  variant="outline"
+                  style={styles.suggestionEmptyButton}
+                  onPress={() => {
+                    setSuggestOpen(false);
+                    router.push('/recipes');
+                  }}
+                />
+              </View>
+            ) : (
+              <ScrollView
+                style={styles.sheetList}
+                showsVerticalScrollIndicator={false}
+              >
+                {suggestions.map((suggestion) => (
+                  <SuggestionRow
+                    key={suggestion.id}
+                    suggestion={suggestion}
+                    isAdmin={isAdmin}
+                    onOpenRecipe={() => {
+                      setSuggestOpen(false);
+                      router.push({
+                        pathname: '/recipes/[recipeId]',
+                        params: { recipeId: suggestion.id },
+                      });
+                    }}
+                    onAdd={() => addSuggestionToMeal(suggestion)}
+                  />
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
     </>
   );
 }
@@ -463,26 +555,44 @@ function MealList({
 function SuggestionRow({
   suggestion,
   isAdmin,
+  onOpenRecipe,
   onAdd,
 }: {
   suggestion: RecipeSuggestion;
   isAdmin: boolean;
+  onOpenRecipe: () => void;
   onAdd: () => void;
 }) {
+  const missingNames = suggestion.missingIngredients
+    .map((ingredient) => ingredient.foodName)
+    .filter((name): name is string => Boolean(name));
+
   return (
-    <View style={styles.mealRow}>
-      <Thumbnail uri={suggestion.image} label={suggestion.name} size={44} />
+    <View style={styles.suggestionRow}>
+      <Thumbnail label={suggestion.name} size={44} />
+
       <View style={styles.mealBody}>
         <Text style={styles.mealName} numberOfLines={1}>
           {suggestion.name}
         </Text>
-        <Text style={styles.mealMeta} numberOfLines={1}>
-          {suggestion.foodName ?? 'Không xác định'} ·{' '}
-          {expiryLabel(suggestion.expiryDate)}
+        <Text style={styles.suggestionReason} numberOfLines={2}>
+          {suggestion.reason}
         </Text>
-      </View>
+        <Text style={styles.mealMeta} numberOfLines={2}>
+          Khớp {suggestion.matchedCount}/{suggestion.totalIngredients} nguyên
+          liệu
+          {missingNames.length > 0
+            ? ` · Thiếu ${missingNames.join(', ')}`
+            : ' · Đủ nguyên liệu'}
+        </Text>
 
-      {isAdmin ? <LinkText onPress={onAdd}>Thêm</LinkText> : null}
+        <View style={styles.suggestionActions}>
+          <LinkText onPress={onOpenRecipe}>Xem công thức</LinkText>
+          {isAdmin ? (
+            <LinkText onPress={onAdd}>Thêm vào bữa ăn</LinkText>
+          ) : null}
+        </View>
+      </View>
     </View>
   );
 }
@@ -561,6 +671,81 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textMuted,
     marginBottom: spacing.sm,
+  },
+  suggestionButton: {
+    marginBottom: spacing.lg,
+  },
+  sheetOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: colors.overlay,
+  },
+  sheet: {
+    maxHeight: '85%',
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xxl,
+  },
+  sheetHandle: {
+    alignSelf: 'center',
+    width: 44,
+    height: 4,
+    borderRadius: radius.pill,
+    backgroundColor: colors.border,
+    marginBottom: spacing.md,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  sheetTitle: {
+    ...typography.heading,
+    color: colors.text,
+    flex: 1,
+  },
+  sheetList: {
+    marginTop: spacing.xs,
+    flexShrink: 1,
+  },
+  suggestionRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  suggestionReason: {
+    ...typography.caption,
+    color: colors.primaryText,
+    marginTop: 2,
+  },
+  suggestionActions: {
+    flexDirection: 'row',
+    gap: spacing.lg,
+    marginTop: spacing.sm,
+  },
+  suggestionEmpty: {
+    paddingVertical: spacing.lg,
+  },
+  suggestionEmptyTitle: {
+    ...typography.bodyStrong,
+    color: colors.text,
+  },
+  suggestionEmptyText: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
+    marginBottom: spacing.lg,
+  },
+  suggestionEmptyButton: {
+    marginTop: spacing.sm,
   },
   modalOverlay: {
     flex: 1,

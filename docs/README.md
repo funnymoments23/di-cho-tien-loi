@@ -109,7 +109,7 @@ di-cho-tien-loi/
   - Nền tảng: model `ShoppingList` (`name`, `groupId`, `assignedTo`, `note`, `date`, `createdBy`) và `Task` (`listId`, `foodId`, `quantity`, `isCompleted`), unique `{ listId, foodId }`; serializer `toPublicShoppingList`/`toPublicTask`.
 - **Nhóm API Bữa ăn** (`routes/meal.route.js`, 5 endpoint) — lịch bữa ăn sáng/trưa/tối của nhóm; chỉ trưởng nhóm lập/sửa/xoá.
   - `GET /meal` — lịch bữa ăn, lọc `?date=YYYY-MM-DD` hoặc `?from=&to=` (`00348`; chưa vào nhóm `00345`).
-  - `GET /meal/suggestion` — gợi ý món từ thực phẩm còn hạn trong tủ, ưu tiên món sắp hết hạn (API bổ sung, [tài liệu 02](02-GOP-Y-DAC-TA-API.md) mục 3.2).
+  - `GET /meal/suggestion` — gợi ý công thức từ nguyên liệu còn hạn trong tủ; xếp hạng theo số nguyên liệu khớp rồi theo hạn sử dụng gần nhất, trả kèm `reason`, `matchedIngredients`, `missingIngredients` (API bổ sung, [tài liệu 02](02-GOP-Y-DAC-TA-API.md) mục 3.2).
   - `POST /meal` — `{ foodName, timestamp, name }` (`00322`; thiếu trường `00313`, tên món/bữa sai `00314`/`00316`, ngày sai `00315`, thực phẩm không tồn tại `00317`, không phải trưởng nhóm `00319`).
   - `PUT /meal` — `{ planId, newFoodName?, newTimestamp?, newName? }` (`00344`; thiếu `planId` `00332`, không có trường cập nhật `00333`, trường mới sai `00334`–`00336`, không tìm thấy `00337`, không phải trưởng nhóm `00339`, thực phẩm mới không tồn tại `00341`).
   - `DELETE /meal` — `{ planId }` hoặc `DELETE /meal/:planId` (`00330`; thiếu `planId` `00323`, sai định dạng `00324`, không tìm thấy `00325`, không phải trưởng nhóm `00327`).

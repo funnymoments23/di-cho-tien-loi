@@ -7,7 +7,7 @@ import {
   View,
   type TextInputProps,
 } from 'react-native';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, fonts, radius, spacing, typography } from '@/theme';
 
 type AppInputProps = Omit<TextInputProps, 'secureTextEntry'> & {
   label: string;
@@ -104,6 +104,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 0,
     color: colors.text,
+    fontFamily: fonts.regular,
     fontSize: 17,
   },
   toggle: {

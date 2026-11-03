@@ -12,7 +12,7 @@ import {
   ErrorState,
   LoadingState,
 } from '@/components/ui/StateView';
-import { colors, spacing, typography } from '@/theme';
+import { colors, fonts, spacing, typography } from '@/theme';
 import { getErrorMessage } from '@/utils/error';
 
 export default function RecipeDetailScreen() {
@@ -189,6 +189,7 @@ const styles = StyleSheet.create({
   },
   htmlBase: {
     color: colors.text,
+    fontFamily: fonts.regular,
     fontSize: 16,
     lineHeight: 24,
   },
@@ -209,8 +210,10 @@ const styles = StyleSheet.create({
 const htmlTagsStyles = {
   p: { marginTop: 0, marginBottom: 8 },
   li: { marginBottom: 4 },
-  h1: { fontSize: 22, marginTop: 8, marginBottom: 8 },
-  h2: { fontSize: 19, marginTop: 8, marginBottom: 6 },
-  h3: { fontSize: 17, marginTop: 8, marginBottom: 4 },
+  h1: { fontFamily: fonts.bold, fontSize: 22, marginTop: 8, marginBottom: 8 },
+  h2: { fontFamily: fonts.bold, fontSize: 19, marginTop: 8, marginBottom: 6 },
+  h3: { fontFamily: fonts.semibold, fontSize: 17, marginTop: 8, marginBottom: 4 },
+  b: { fontFamily: fonts.semibold },
+  strong: { fontFamily: fonts.semibold },
   a: { color: colors.primaryText },
 } as const;

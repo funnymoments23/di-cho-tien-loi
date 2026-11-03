@@ -8,7 +8,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { colors, radius, spacing, typography } from '@/theme';
+import { colors, fonts, radius, spacing, typography } from '@/theme';
 
 export type SelectOption = {
   id: string;
@@ -200,6 +200,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     paddingHorizontal: spacing.md,
     color: colors.text,
+    fontFamily: fonts.regular,
     fontSize: 14,
     backgroundColor: colors.background,
     marginBottom: spacing.sm,
@@ -225,7 +226,7 @@ const styles = StyleSheet.create({
   },
   optionTextSelected: {
     color: colors.primaryText,
-    fontWeight: '600',
+    fontFamily: fonts.semibold,
   },
   empty: {
     ...typography.caption,

@@ -244,16 +244,16 @@ const deleteMealPlan = async (userId, { planId }) => {
 };
 
 /**
- * GET /meal/suggestion — gợi ý món ăn từ thực phẩm đang có trong tủ lạnh.
+ * GET /meal/suggestion — gợi ý công thức nấu được từ thực phẩm đang có trong tủ.
  *
- * Thuật toán (docs/01 mục 6.3):
- * 1. Lấy các mục còn hạn trong tủ của nhóm.
- * 2. Tìm recipe gắn với các thực phẩm đó.
- * 3. Ưu tiên món dùng thực phẩm có hạn sử dụng gần nhất, đúng mục tiêu
- *    giảm lãng phí thực phẩm của đề.
- *
- * Mỗi recipe chỉ gắn một foodId nên chưa xếp hạng được theo số nguyên liệu
- * khớp; hướng mở rộng là thêm ingredients[] vào recipe.
+ * Thuật toán (docs/02 mục 3.2):
+ * 1. Lấy các mục còn hạn trong tủ của nhóm (mỗi thực phẩm lấy hạn gần nhất,
+ *    cộng dồn số lượng nếu có nhiều mục).
+ * 2. Với mỗi công thức, đối chiếu danh sách nguyên liệu với tủ. Công thức cũ
+ *    chỉ có `foodId` (chưa có `ingredients`) vẫn được coi là một nguyên liệu.
+ * 3. Chỉ giữ công thức khớp ít nhất một nguyên liệu; xếp hạng theo số nguyên
+ *    liệu khớp giảm dần, rồi theo hạn sử dụng gần nhất để ưu tiên tiêu thụ
+ *    thực phẩm sắp hết hạn.
  */
 const suggestMeals = async (userId, { limit } = {}) => {
   const { group } = await loadGroupContext(userId, RC.MEAL_GET_NOT_IN_GROUP); // 00345
@@ -274,35 +274,132 @@ const suggestMeals = async (userId, { limit } = {}) => {
 
   if (fridgeItems.length === 0) return [];
 
-  const foodIds = fridgeItems.map((item) => item.foodId);
-  const recipes = await Recipe.find({ groupId: group._id, foodId: { $in: foodIds } })
-    .populate({ path: 'foodId', select: 'name image' })
+  // Gộp theo thực phẩm: lấy hạn gần nhất và tổng số lượng đang có trong tủ.
+  const fridgeByFood = new Map();
+  for (const item of fridgeItems) {
+    const foodId = item.foodId.toString();
+    const current = fridgeByFood.get(foodId);
+    if (!current) {
+      fridgeByFood.set(foodId, {
+        quantity: item.quantity,
+        expiryDate: item.expiryDate,
+        location: item.location ?? null,
+        note: item.note ?? null,
+      });
+      continue;
+    }
+
+    current.quantity += item.quantity;
+    if (item.expiryDate < current.expiryDate) {
+      current.expiryDate = item.expiryDate;
+      current.location = item.location ?? null;
+      current.note = item.note ?? null;
+    }
+  }
+
+  const recipes = await Recipe.find({ groupId: group._id })
+    .populate([
+      { path: 'foodId', select: 'name' },
+      {
+        path: 'ingredients.foodId',
+        select: 'name unitId',
+        populate: { path: 'unitId', select: 'name' },
+      },
+    ])
     .sort({ name: 1 });
 
-  const fridgeByFood = new Map(
-    fridgeItems.map((item) => [item.foodId.toString(), item])
-  );
+  const suggestions = [];
 
-  const suggestions = recipes.map((recipe) => {
-    const foodId = recipe.foodId?._id ?? recipe.foodId;
-    const fridgeItem = fridgeByFood.get(foodId.toString());
-    const expiryDate = fridgeItem.expiryDate;
+  for (const recipe of recipes) {
+    const primaryFoodId = recipe.foodId?._id ?? recipe.foodId;
+    const ingredients = (recipe.ingredients ?? []).map((ingredient) => ({
+      foodId: ingredient.foodId?._id ?? ingredient.foodId,
+      foodName: ingredient.foodId?.name ?? null,
+      quantity: ingredient.quantity,
+      unitName: ingredient.foodId?.unitId?.name ?? null,
+    }));
 
-    return {
+    // Công thức cũ chưa có ingredients[] thì dùng món ăn chính làm nguyên liệu.
+    if (ingredients.length === 0 && primaryFoodId) {
+      ingredients.push({
+        foodId: primaryFoodId,
+        foodName: recipe.foodId?.name ?? null,
+        quantity: 1,
+        unitName: null,
+      });
+    }
+
+    const matchedIngredients = [];
+    const missingIngredients = [];
+
+    for (const ingredient of ingredients) {
+      const fridge = ingredient.foodId
+        ? fridgeByFood.get(ingredient.foodId.toString())
+        : null;
+
+      if (!fridge) {
+        missingIngredients.push({
+          foodId: ingredient.foodId ?? null,
+          foodName: ingredient.foodName ?? null,
+        });
+        continue;
+      }
+
+      matchedIngredients.push({
+        ...ingredient,
+        fridgeQuantity: fridge.quantity,
+        expiryDate: fridge.expiryDate,
+        daysUntilExpiry: Math.ceil(
+          (fridge.expiryDate.getTime() - now.getTime()) / DAY_MS
+        ),
+        location: fridge.location ?? null,
+        note: fridge.note ?? null,
+      });
+    }
+
+    if (matchedIngredients.length === 0) continue;
+
+    const nearest = matchedIngredients.reduce((soonest, ingredient) =>
+      ingredient.expiryDate < soonest.expiryDate ? ingredient : soonest
+    );
+    const daysUntilExpiry = nearest.daysUntilExpiry;
+    const reason =
+      daysUntilExpiry <= 0
+        ? `Dùng ${nearest.foodName ?? 'nguyên liệu'} hết hạn hôm nay`
+        : `Dùng ${nearest.foodName ?? 'nguyên liệu'} còn ${daysUntilExpiry} ngày`;
+
+    suggestions.push({
       ...toPublicRecipe(recipe),
-      quantity: fridgeItem.quantity,
-      expiryDate,
-      daysUntilExpiry: Math.ceil((expiryDate.getTime() - now.getTime()) / DAY_MS),
-      location: fridgeItem.location ?? null,
-      note: fridgeItem.note ?? null,
-    };
+      reason,
+      matchedCount: matchedIngredients.length,
+      totalIngredients: ingredients.length,
+      matchedIngredients,
+      missingIngredients,
+      // Giữ các trường cũ để client đang dùng không bị vỡ.
+      quantity: nearest.fridgeQuantity,
+      expiryDate: nearest.expiryDate,
+      daysUntilExpiry,
+      location: nearest.location,
+      note: nearest.note,
+    });
+  }
+
+  // Khớp nhiều nguyên liệu hơn lên trước; cùng số nguyên liệu thì ưu tiên
+  // công thức dùng thực phẩm sắp hết hạn nhất, cuối cùng xếp theo tên.
+  suggestions.sort((a, b) => {
+    if (b.matchedCount !== a.matchedCount) {
+      return b.matchedCount - a.matchedCount;
+    }
+    const expiryDiff = new Date(a.expiryDate) - new Date(b.expiryDate);
+    if (expiryDiff !== 0) return expiryDiff;
+    return a.name.localeCompare(b.name);
   });
 
-  // Thực phẩm sắp hết hạn nhất lên đầu; cùng hạn thì giữ thứ tự tên recipe.
-  suggestions.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
-
   const parsedLimit = Number.parseInt(limit, 10);
-  const max = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 100) : 20;
+  const max =
+    Number.isFinite(parsedLimit) && parsedLimit > 0
+      ? Math.min(parsedLimit, 100)
+      : 20;
   return suggestions.slice(0, max);
 };
 

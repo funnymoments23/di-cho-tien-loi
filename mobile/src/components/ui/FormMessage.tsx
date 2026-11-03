@@ -19,19 +19,19 @@ export function FormMessage({
   message,
   autoHideMs = 5000,
 }: FormMessageProps) {
-  const [visible, setVisible] = useState(true);
+  const [hiddenMessage, setHiddenMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    setVisible(true);
-
     // Chỉ thông báo thành công tự ẩn; lỗi/info cần người dùng đọc và xử lý.
     if (type !== 'success') return;
 
-    const timer = setTimeout(() => setVisible(false), autoHideMs);
+    const timer = setTimeout(() => setHiddenMessage(message), autoHideMs);
     return () => clearTimeout(timer);
   }, [message, type, autoHideMs]);
 
-  if (!visible) return null;
+  // Thông báo mới (khác lần vừa tự ẩn) sẽ hiện lại mà không cần setState
+  // đồng bộ trong effect.
+  if (hiddenMessage === message) return null;
 
   const tone = tones[type];
 

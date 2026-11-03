@@ -562,6 +562,105 @@ describe(`GET ${MEAL}/suggestion — gợi ý món từ tủ lạnh`, () => {
 });
 
 // =====================================================================
+describe(`GET ${MEAL}/suggestion - gợi ý theo nguyên liệu công thức`, () => {
+  it('xếp hạng theo số nguyên liệu khớp rồi hạn sử dụng kèm lý do', async () => {
+    await createFridgeRequest(ctx.member.token, {
+      foodName: 'Thịt bò',
+      useWithin: daysFromNow(5),
+    });
+    await createFridgeRequest(ctx.member.token, {
+      foodName: 'Cà rốt',
+      useWithin: daysFromNow(2),
+    });
+
+    await Recipe.create([
+      {
+        groupId: ctx.foods.beef.groupId,
+        name: 'Bò hầm cà rốt',
+        description: 'Món hầm',
+        htmlContent: '<p>1</p>',
+        ingredients: [
+          { foodId: ctx.foods.beef.id, quantity: 1 },
+          { foodId: ctx.foods.carrot.id, quantity: 2 },
+        ],
+      },
+      {
+        groupId: ctx.foods.beef.groupId,
+        name: 'Bò nướng',
+        description: 'Món nướng',
+        htmlContent: '<p>2</p>',
+        ingredients: [{ foodId: ctx.foods.beef.id, quantity: 1 }],
+      },
+    ]);
+
+    const res = await request(app)
+      .get(`${MEAL}/suggestion`)
+      .set(auth(ctx.member.token));
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.map((item) => item.name)).toEqual([
+      'Bò hầm cà rốt',
+      'Bò nướng',
+    ]);
+
+    const first = res.body.data[0];
+    expect(first.matchedCount).toBe(2);
+    expect(first.totalIngredients).toBe(2);
+    expect(first.missingIngredients).toEqual([]);
+    expect(first.matchedIngredients).toHaveLength(2);
+    expect(first.matchedIngredients[0]).toMatchObject({
+      foodName: 'Thịt bò',
+      unitName: 'kg',
+      fridgeQuantity: 2,
+    });
+    expect(first.reason).toContain('Cà rốt');
+    expect(first.reason).toContain('2 ngày');
+  });
+
+  it('bỏ công thức không khớp nguyên liệu nào và báo nguyên liệu còn thiếu', async () => {
+    await createFridgeRequest(ctx.member.token, {
+      foodName: 'Thịt bò',
+      useWithin: daysFromNow(3),
+    });
+
+    await Recipe.create([
+      {
+        groupId: ctx.foods.beef.groupId,
+        name: 'Bò xào',
+        description: 'Món xào',
+        htmlContent: '<p>1</p>',
+        ingredients: [
+          { foodId: ctx.foods.beef.id, quantity: 1 },
+          { foodId: ctx.foods.carrot.id, quantity: 1 },
+        ],
+      },
+      {
+        groupId: ctx.foods.beef.groupId,
+        name: 'Cà rốt hầm',
+        description: 'Món hầm',
+        htmlContent: '<p>2</p>',
+        ingredients: [{ foodId: ctx.foods.carrot.id, quantity: 1 }],
+      },
+    ]);
+
+    const res = await request(app)
+      .get(`${MEAL}/suggestion`)
+      .set(auth(ctx.member.token));
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0]).toMatchObject({
+      name: 'Bò xào',
+      matchedCount: 1,
+      totalIngredients: 2,
+    });
+    expect(res.body.data[0].missingIngredients).toEqual([
+      { foodId: ctx.foods.carrot.id, foodName: 'Cà rốt' },
+    ]);
+  });
+});
+
+// =====================================================================
 describe('Dọn dữ liệu liên quan khi xoá thực phẩm', () => {
   it('xoá thực phẩm xoá luôn kế hoạch bữa ăn và công thức của món đó', async () => {
     await createMealRequest(ctx.groupAdmin.token);
