@@ -122,3 +122,39 @@ Android cần service account Google Play; iOS cần Apple ID/App Store Connect.
 - Bấm thông báo `EXPIRY_REMINDER` sẽ mở tab **Tủ lạnh**.
 - Nếu thiếu `google-services.json` hoặc chưa upload FCM key, app vẫn build nhưng **không nhận được push** trên Android.
 - Nếu chưa có `projectId`, app hiện thông báo hướng dẫn thay vì crash.
+
+## Lỗi prebuild trên Windows với đường dẫn có dấu tiếng Việt
+
+Triệu chứng:
+
+```text
+AssertionError: Project file "MainApplication" does not exist in android project
+...
+at getProjectFilePath (@expo/config-plugins/build/android/Paths.js)
+```
+
+Nguyên nhân: thư mục dự án chứa ký tự không phải ASCII (ví dụ
+`C:\Users\LENOVO\Desktop\PTUD đa nền tảng\di-cho-tien-loi`) làm bước giải nén
+template native của Expo bị lỗi, thiếu `MainApplication.kt`.
+
+Cách xử lý:
+
+1. **Khuyến nghị:** chuyển/clone dự án sang đường dẫn chỉ có ASCII, ví dụ:
+   ```text
+   C:\dev\di-cho-tien-loi
+   ```
+2. Hoặc tạo junction ASCII trỏ tới thư mục thật rồi chạy lệnh native từ đó:
+   ```powershell
+   New-Item -ItemType Junction `
+     -Path "C:\Users\LENOVO\dev\di-cho-tien-loi" `
+     -Target "C:\Users\LENOVO\Desktop\PTUD đa nền tảng\di-cho-tien-loi\mobile"
+
+   cd "C:\Users\LENOVO\dev\di-cho-tien-loi"
+   npx expo run:android
+   ```
+3. Nếu `android/` đã tồn tại và chỉ muốn áp dụng lại cấu hình mới:
+   ```powershell
+   npx expo prebuild --platform android --no-clean
+   ```
+
+Thư mục `android/` và `ios/` do Expo sinh ra, đã nằm trong `.gitignore`; không sửa trực tiếp.
