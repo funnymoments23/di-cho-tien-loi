@@ -27,7 +27,6 @@ import {
   ErrorState,
   LoadingState,
 } from '@/components/ui/StateView';
-import { Thumbnail } from '@/components/ui/Thumbnail';
 import { colors, radius, spacing, typography } from '@/theme';
 import { getErrorMessage } from '@/utils/error';
 import { htmlToPlainText, plainTextToHtml } from '@/utils/recipe';
@@ -384,11 +383,6 @@ export default function RecipesScreen() {
                   }
                   style={styles.recipeRow}
                 >
-                  <Thumbnail
-                    uri={recipe.image}
-                    label={recipe.foodName ?? recipe.name}
-                    size={56}
-                  />
                   <View style={styles.recipeBody}>
                     <Text style={styles.recipeName} numberOfLines={2}>
                       {recipe.name}
@@ -541,7 +535,7 @@ export default function RecipesScreen() {
                 label="Cách làm"
                 value={steps}
                 onChangeText={setSteps}
-                placeholder="Cách làm"
+                placeholder="Mô tả cách làm với mỗi bước trên một dòng"
                 multiline
                 numberOfLines={8}
                 maxLength={200000}

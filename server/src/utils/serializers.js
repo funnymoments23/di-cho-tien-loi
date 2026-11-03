@@ -207,7 +207,7 @@ const toPublicMealPlan = (plan) => {
 
 /**
  * Chuyển document Recipe thành object trả cho client.
- * `foodId` cần được populate (chỉ lấy `name`, `image`) trước khi gọi.
+ * `foodId` cần được populate (chỉ lấy `name`) trước khi gọi.
  * `htmlContent` được trả đầy đủ vì màn hình chi tiết công thức cần render HTML.
  */
 const toPublicRecipe = (recipe) => {
@@ -226,7 +226,6 @@ const toPublicRecipe = (recipe) => {
     return {
       foodId: isIngredientPopulated ? ingredientFood._id : ingredientFood,
       foodName: isIngredientPopulated ? ingredientFood.name ?? null : null,
-      image: isIngredientPopulated ? ingredientFood.image ?? null : null,
       unitId: unit?._id ?? null,
       unitName: unit?.name ?? null,
       quantity: ingredient.quantity,
@@ -238,7 +237,6 @@ const toPublicRecipe = (recipe) => {
     groupId: recipe.groupId,
     foodId: isPopulated ? food._id : food,
     foodName: isPopulated ? food.name : null,
-    image: isPopulated ? food.image ?? null : null,
     name: recipe.name,
     description: recipe.description,
     htmlContent: recipe.htmlContent,

@@ -8,12 +8,12 @@ const { fail } = require('../utils/response');
 const { parsePagination, pageResult, applyPagination } = require('../utils/pagination');
 const { toPublicRecipe } = require('../utils/serializers');
 
-// Luôn lấy kèm tên / ảnh của món để client hiển thị trực tiếp.
+// Luôn lấy kèm tên món (và đơn vị của nguyên liệu) để client hiển thị trực tiếp.
 const RECIPE_POPULATE = [
-  { path: 'foodId', select: 'name image' },
+  { path: 'foodId', select: 'name' },
   {
     path: 'ingredients.foodId',
-    select: 'name image unitId',
+    select: 'name unitId',
     populate: { path: 'unitId', select: 'name' },
   },
 ];

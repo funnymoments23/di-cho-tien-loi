@@ -117,7 +117,6 @@ export type MealPlan = {
 export type RecipeIngredient = {
   foodId: string | null;
   foodName: string | null;
-  image: string | null;
   unitId: string | null;
   unitName: string | null;
   quantity: number;
@@ -128,7 +127,6 @@ export type Recipe = {
   groupId: string;
   foodId: string | null;
   foodName: string | null;
-  image: string | null;
   name: string;
   description: string;
   htmlContent: string;
