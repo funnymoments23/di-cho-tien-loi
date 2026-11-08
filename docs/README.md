@@ -22,7 +22,7 @@ di-cho-tien-loi/
 ├── docs/        # tài liệu thiết kế
 ├── server/      # backend Node.js + Express
 ├── mobile/      # ứng dụng React Native + Expo (xem mobile/BUILD.md)
-└── admin/       # trang quản trị web             (chưa khởi tạo)
+└── admin/       # trang quản trị web React + Vite + Ant Design (xem admin/README.md)
 ```
 
 ## Tiến độ
@@ -152,9 +152,18 @@ di-cho-tien-loi/
 - Push notification: xin quyền, đăng ký `ExpoPushToken` với backend, channel `expiry`, bấm thông báo mở tab Tủ lạnh.
 - Build/release: EAS project `@funnymoments23/di-cho-tien-loi`, `eas.json` (development/preview/production), hướng dẫn chi tiết tại [mobile/BUILD.md](../mobile/BUILD.md).
 
+### Đã làm — web quản trị (`admin/`)
+
+- Khởi tạo React 18 + Vite + TypeScript + Ant Design 5; giao diện tiếng Việt, responsive cho laptop và màn hình nhỏ.
+- Đăng nhập riêng cho quản trị viên: chỉ nhận tài khoản `role = admin`, lưu access/refresh token trong `localStorage`, tự động refresh khi gặp mã `00011`/`00012`, đăng xuất khi token hỏng hoặc tài khoản bị khoá (`00403`).
+- **Tổng quan**: số người dùng, danh mục, đơn vị, bản ghi nhật ký; 5 thao tác gần nhất; trạng thái kết nối API.
+- **Người dùng** (`/admin/user`): tìm theo tên/email/username, lọc vai trò – trạng thái – xác minh, phân trang; sửa hồ sơ/vai trò/xác minh; khoá – mở khoá; xoá tài khoản. Chặn tự đổi quyền, tự khoá, tự xoá tài khoản đang đăng nhập ở giao diện.
+- **Danh mục** (`/admin/category`) và **Đơn vị đo** (`/admin/unit`): thêm, đổi tên, xoá, tìm kiếm; giữ nguyên ràng buộc không xoá khi còn thực phẩm tham chiếu (`00407`/`00408`).
+- **Nhật ký hệ thống** (`/admin/logs`): lọc theo hành động, đối tượng, khoảng ngày, `userId`; phân trang, xem người thực hiện và nhóm liên quan.
+- Kiểm tra kiểu + build production: `npm run build` trong `admin/` chạy thành công.
+
 ### Chưa làm
 
-- Trang admin web.
 - Deploy backend lên Render/Railway và cấu hình biến môi trường production (đặc biệt `SMTP_*`).
 - Postman collection dùng chung trong repo.
 
@@ -174,6 +183,18 @@ npm run dev          # http://localhost:5000/it4788/health
 cd server
 npm test        # 543 test API Auth + Quên mật khẩu + Tài khoản + Nhóm + Danh mục + Đơn vị + Quản trị người dùng + Nhật ký + Thực phẩm + Tủ lạnh + Đi chợ + Bữa ăn + Công thức + Báo cáo + rate limit + cron/push + seed admin + hardening, dùng MongoDB in-memory, không cần .env
 ```
+
+### Chạy web quản trị
+
+```bash
+cd admin
+npm install
+# tạo admin/.env: VITE_API_URL=http://localhost:5000/it4788
+# (đổi cổng nếu server/.env dùng PORT khác, ví dụ 5001)
+npm run dev     # http://localhost:5173
+```
+
+Đăng nhập bằng tài khoản đã tạo bởi `npm run seed:admin` trong `server/`. Chi tiết chức năng và cấu trúc xem [admin/README.md](../admin/README.md).
 
 ### Deploy lên Render
 

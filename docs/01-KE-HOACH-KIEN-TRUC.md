@@ -526,7 +526,7 @@ sequenceDiagram
 | **Tìm kiếm món ăn / thực phẩm** | **API bổ sung `GET /food/search`** | ☐ |
 | Phân loại theo danh mục | `categories` + bộ lọc ở màn hình 5, 12 | ☐ |
 | **Thống kê báo cáo mua sắm & tiêu thụ** | **API bổ sung `GET /report/*`** + màn hình 16 | ☐ |
-| Quản trị tài khoản & danh mục | Web admin + `admin/` routes | ☐ |
+| Quản trị tài khoản & danh mục | Web admin + `admin/` routes | ☑ |
 | Xử lý push notification phía client | Expo Notifications trong app | ☐ |
 | Kiểm thử tổng hợp, kiểm thử chéo | `docs/test-report.md` | ☐ |
 
