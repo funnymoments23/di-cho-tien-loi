@@ -78,3 +78,5 @@ Desktop.ini
 *.orig
 *.rej
 google-services.json
+key
+key.pub
