@@ -58,10 +58,13 @@ const ensureAndroidChannel = async () => {
 export async function registerPushNotifications(
   requestPermission = true
 ): Promise<PushState> {
-  if (!Device.isDevice) {
+  // iOS Simulator không có APNs nên không thể lấy token. Android emulator có
+  // Google Play services vẫn nhận push bình thường — nếu thiếu FCM,
+  // getExpoPushTokenAsync() sẽ ném lỗi và được bắt ở dưới.
+  if (!Device.isDevice && Platform.OS === 'ios') {
     return {
       status: 'unsupported',
-      message: 'Thông báo đẩy cần chạy trên thiết bị thật.',
+      message: 'Trình mô phỏng iOS không nhận được thông báo đẩy.',
       token: null,
     };
   }
@@ -123,7 +126,10 @@ async function doRegister(requestPermission: boolean): Promise<PushState> {
       message: 'Đã bật thông báo thực phẩm sắp hết hạn.',
       token: result.data,
     };
-  } catch {
+  } catch (err) {
+    // Log lỗi thật để debug trên Metro: thường gặp "Default FirebaseApp is not
+    // initialized" (thiếu google-services.json) hoặc lỗi FCM credentials.
+    console.warn('[push] getExpoPushTokenAsync failed:', err);
     return {
       status: 'error',
       message:

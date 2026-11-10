@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "772785213179",
+    "project_id": "di-cho-tien-loi-620c3",
+    "storage_bucket": "di-cho-tien-loi-620c3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:772785213179:android:1c60022425fc1de47e2a5e",
+        "android_client_info": {
+          "package_name": "com.dichotienloi.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAA_QBtKl4gm8o1aT9b9rUbAaOnmj5zuzk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

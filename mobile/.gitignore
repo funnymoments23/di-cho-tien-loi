@@ -41,3 +41,7 @@ example
 # generated native folders
 /ios
 /android
+
+# Firebase service account key (FCM V1) — chứa private key, không commit
+*-firebase-adminsdk-*.json
+firebase-service-account*.json
