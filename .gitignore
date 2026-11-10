@@ -77,3 +77,4 @@ Desktop.ini
 # ===== File merge còn sót =====
 *.orig
 *.rej
+google-services.json
